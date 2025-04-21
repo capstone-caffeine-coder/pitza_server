@@ -16,7 +16,13 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # the application crashes without emitting any logs due to buffering.
 ENV PYTHONUNBUFFERED=1
 
-WORKDIR /app
+WORKDIR /backend
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config \
+    gcc \
+    default-libmysqlclient-dev \
+ && rm -rf /var/lib/apt/lists/*
 
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/go/dockerfile-user-best-practices/
