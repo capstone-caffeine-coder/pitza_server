@@ -16,3 +16,18 @@ services:
       - ./mysql:/etc/mysql/conf.d
     depends_on:
       - db
+  minio:
+    image: minio/minio
+    ports:
+      - 9000:9000
+      - 9001:9001
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data/minio:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 10
