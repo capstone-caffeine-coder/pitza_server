@@ -40,7 +40,7 @@ db.sqlite3-journal
 .ruff_cache/
 
 # Docker
-data/db/
+data/
 
 # env
 .env
