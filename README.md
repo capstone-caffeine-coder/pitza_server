@@ -54,6 +54,10 @@ The application will be available at `http://localhost:8000`
 - Persistent storage in `data/db` directory
 - Custom configuration from `mysql` directory
 
+### MinIO Service
+
+- Register AccessKey, SecretKey 
+
 ## Development
 
 To stop the services:
