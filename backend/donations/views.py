@@ -12,13 +12,25 @@ def detail(request, id):
     return JsonResponse(donation_request, status=200)
 
 def create(request):
-    # TODO: When donation due date is past today, return 400
-    request_data = request.POST.get('request_data')
-    request_data = json.loads(request_data)
-    # TODO: Upload image
+# TODO: When donation due date is past today, return 400
 
-    donation_request = DonationRequest.objects.create(**request_data)
-    return JsonResponse(status=201)
+    request_data = json.loads(request.POST.get('request_data'))
+    
+    donation_request = DonationRequest.objects.create(
+        requester_id=request.user,
+        **request_data
+    )
+    
+    # Handle image upload if present
+    if 'image' in request.FILES:
+        donation_request.image = request.FILES['image']
+        donation_request.save()
+        
+    return JsonResponse({
+        'id': donation_request.id,
+    }, status=201)
+        
+
 
 def match(request):
 
