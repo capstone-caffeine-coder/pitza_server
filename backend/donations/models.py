@@ -31,8 +31,7 @@ class DonationRequest(models.Model):
     donator_registered = models.ForeignKey('auth.User', on_delete=models.SET_NULL, related_name='donations_registered', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
-    def __str__(self):
-        return f"Donation request for {self.name}"
+
 
 class RejectedMatchRequest(models.Model):
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='rejected_matches')
@@ -40,9 +39,6 @@ class RejectedMatchRequest(models.Model):
     
     class Meta:
         unique_together = ('user', 'donation_request')
-        
-    def __str__(self):
-        return f"Rejected match: {self.user.username} - {self.donation_request.name}"
 
 class SelectedMatchRequest(models.Model):
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='selected_matches')
@@ -52,5 +48,3 @@ class SelectedMatchRequest(models.Model):
     class Meta:
         unique_together = ('user', 'donation_request')
         
-    def __str__(self):
-        return f"Selected match: {self.user.username} - {self.donation_request.name} ({self.get_donation_status_display()})"

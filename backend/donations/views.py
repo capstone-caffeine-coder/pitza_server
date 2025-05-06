@@ -12,9 +12,12 @@ def detail(request, id):
     return JsonResponse(donation_request, status=200)
 
 def create(request):
-    # TODO: Create donation request
+    # TODO: When donation due date is past today, return 400
     request_data = request.POST.get('request_data')
-    donation_request = DonationRequest.objects.create(request_data)
+    request_data = json.loads(request_data)
+    # TODO: Upload image
+
+    donation_request = DonationRequest.objects.create(**request_data)
     return JsonResponse(status=201)
 
 def match(request):
