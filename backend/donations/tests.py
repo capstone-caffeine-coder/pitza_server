@@ -25,6 +25,7 @@ class DonationRequestTests(TestCase):
         # Skip user authentication
         
         self.donation_request_data = {
+            'requester_id': 2,
             'name': 'John Doe',
             'age': 35,
             'sex': 'M',
@@ -35,6 +36,10 @@ class DonationRequestTests(TestCase):
             'donation_due_date': (timezone.now().date() + timedelta(days=7)).isoformat(),
             'donator_registered_id': "12345678"
         }
+        
+        self.get_donation_request_data_by_id = {
+            'id': 2
+        }
     
     def test_create_donation_request_valid(self):
         """Test creating a donation request with valid data"""
@@ -44,7 +49,6 @@ class DonationRequestTests(TestCase):
         response = self.client.post(
             url, 
             data={'request_data': json.dumps(self.donation_request_data)},
-            content_type='application/json'
         )
         
         # Check response status code
@@ -74,7 +78,6 @@ class DonationRequestTests(TestCase):
         response = self.client.post(
             url, 
             data={'request_data': json.dumps(invalid_data)},
-            content_type='application/json'
         )
         
         # Check response status code indicates error
@@ -97,7 +100,6 @@ class DonationRequestTests(TestCase):
         response = self.client.post(
             url, 
             data={'request_data': json.dumps(invalid_data)},
-            content_type='application/json'
         )
         
         # Check response status code indicates error
@@ -105,5 +107,37 @@ class DonationRequestTests(TestCase):
         
         # Verify no donation request was created
         self.assertEqual(DonationRequest.objects.count(), 0)
+
+    def test_get_donation_request_by_id(self):
+        """Test getting a donation request by its ID"""
+        # First create a donation request
+        url_create = reverse('donations:create')
+        self.client.post(
+            url_create,
+            data={'request_data': json.dumps()},
+        )
+        
+        # Get the created donation request's ID
+        donation = DonationRequest.objects.first()
+        request_id = donation.id
+        
+        # Test retrieving the donation request by ID
+        url_detail = reverse('donations:detail', args=[request_id])
+        response = self.client.get(url_detail)
+        
+        # Check response status code
+        self.assertEqual(response.status_code, 200)
+        
+        # Parse response data
+        response_data = json.loads(response.content)
+        
+        # Verify returned data matches the created donation request
+        self.assertEqual(response_data['id'], request_id)
+        self.assertEqual(response_data['name'], self.donation_request_data['name'])
+        self.assertEqual(response_data['age'], self.donation_request_data['age'])
+        self.assertEqual(response_data['sex'], self.donation_request_data['sex'])
+        self.assertEqual(response_data['blood_type'], self.donation_request_data['blood_type'])
+        self.assertEqual(response_data['location'], self.donation_request_data['location'])
+        self.assertEqual(response_data['content'], self.donation_request_data['content'])
 
 
