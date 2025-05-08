@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'donations.apps.DonationsConfig',
     'storages',  # Add django-storages app
+    'drf_yasg'
 ]
 
 MIDDLEWARE = [
