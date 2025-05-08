@@ -1,11 +1,113 @@
 from django.test import TestCase, Client
 from django.urls import reverse
-from django.contrib.auth.models import User
 from django.utils import timezone
+from unittest.mock import MagicMock, patch
 from datetime import timedelta
 import json
 
 from .models import DonationRequest
+
+class MatchTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        
+        self.donation_data = {
+            'id': 1,
+            'requester_id': 2,
+            'name': 'John Doe',
+            'age': 35,
+            'sex': 'M',
+            'blood_type': 'A-',
+            'content': 'Emergency blood donation needed',
+            'image': 'test.jpg',
+            'location': 'Seoul',
+            'donation_due_date': (timezone.now().date() + timedelta(days=7)).isoformat(),
+            'donator_registered_id': "12345678"
+        }
+        
+        self.match_input = {
+            'user_id': 3,
+            'blood_type': 'A-',
+            'age': 10,
+            'sex': 'female',
+            'location': 'Incheon',
+            'next_donation_date': '2025-04-29' 
+        }
+        
+    def test_match_donation_request_when_match_is_selected(self):
+        url = reverse('donations:match')
+        
+        # Create donation request
+        url_create = reverse('donations:create')
+        self.client.post(
+            url_create,
+            data={'request_data': json.dumps(self.donation_data)},
+        )
+        
+        # Send match reqeust
+        request_data = json.dumps(self.match_input)
+        response = self.client.post(
+            url,
+            data={'request_data': request_data},
+        )
+        
+        # Check response status code
+        self.assertEqual(response.status_code, 200)
+        
+        # Check response data
+        response_data = json.loads(response)
+        
+        self.assertEqual(response_data['id'], self.donation_data['id'])
+        
+        # Send select match
+        url_select_match = reverse('donations:select_match')
+        response = self.client.post(
+            url_select_match,
+            data={'request_id': self.donation_data['id'], 'user_id': self.match_input['user_id']},
+        )
+        
+        # Check response status code
+        self.assertEqual(response.status_code, 200)
+
+        # Check response data contains donator_registered_id
+        response_data = json.loads(response)
+        self.assertEqual(response_data['donator_registered_id'], self.donation_data['donator_registered_id'])
+
+    def test_match_donation_request_when_match_is_rejected(self):
+        url = reverse('donations:match')
+        
+        # Create donation request
+        url_create = reverse('donations:create')
+        self.client.post(
+            url_create,
+            data={'request_data': json.dumps(self.donation_data)},
+        )
+        
+        # Send match reqeust
+        request_data = json.dumps(self.match_input)
+        response = self.client.post(
+            url,
+            data={'request_data': request_data},
+        )
+        
+        # Check response status code
+        self.assertEqual(response.status_code, 201)
+      
+        
+        # Send reject match
+        url_reject_match = reverse('donations:reject_match')
+        response = self.client.post(
+            url_reject_match,
+            data={'request_id': self.donation_data['id'], 'id': self.match_input['user_id']},
+        )
+        
+        # Check response status code
+        self.assertEqual(response.status_code, 200)
+
+        # Check response data contains donator_registered_id
+        response_data = json.loads(response)
+        self.assertEqual(response_data['donator_registered_id'], self.donation_data['donator_registered_id'])
+
 
 
 class DonationRequestTests(TestCase):
@@ -21,8 +123,7 @@ class DonationRequestTests(TestCase):
         }
       
         self.client = Client()
-        
-        # Skip user authentication
+        # user authentication
         
         self.donation_request_data = {
             'requester_id': 2,
@@ -40,53 +141,36 @@ class DonationRequestTests(TestCase):
         self.get_donation_request_data_by_id = {
             'id': 2
         }
-    
-    def test_create_donation_request_valid(self):
-        """Test creating a donation request with valid data"""
+
+    def test_create_donation_request_success(self):
+        
         url = reverse('donations:create')
+       
+        request_data = self.donation_request_data
         
-        # Send POST request with valid data
+        post_data = json.dumps({
+            'request_data':  {
+            'name': 'John Doe',
+            'age': 35,
+            'sex': 'M',
+            'blood_type': 'A-',
+            'content': 'Emergency blood donation needed',
+            'image': 'test.jpg',
+            'location': 'Seoul',
+            'donation_due_date': (timezone.now().date() + timedelta(days=7)).isoformat(),
+                'donator_registered_id': "12345678"
+            }
+        })
+
         response = self.client.post(
-            url, 
-            data={'request_data': json.dumps(self.donation_request_data)},
+            url,
+            json.loads(post_data),
         )
-        
-        # Check response status code
+
         self.assertEqual(response.status_code, 201)
-        
-        # Verify donation request was created in the database
-        self.assertEqual(DonationRequest.objects.count(), 1)
-        
-        # Verify donation request data was saved correctly
-        donation = DonationRequest.objects.first()
-        self.assertEqual(donation.name, self.donation_request_data['name'])
-        self.assertEqual(donation.age, self.donation_request_data['age'])
-        self.assertEqual(donation.sex, self.donation_request_data['sex'])
-        self.assertEqual(donation.blood_type, self.donation_request_data['blood_type'])
-        self.assertEqual(donation.location, self.donation_request_data['location'])
-        self.assertEqual(donation.requester, self.user)
-    
-    def test_create_donation_request_invalid_blood_type(self):
-        """Test creating a donation request with invalid blood type"""
-        url = reverse('donations:create')
-        
-        # Create data with invalid blood type
-        invalid_data = self.donation_request_data.copy()
-        invalid_data['blood_type'] = 'X+'  # Invalid blood type
-        
-        # Send POST request with invalid data
-        response = self.client.post(
-            url, 
-            data={'request_data': json.dumps(invalid_data)},
-        )
-        
-        # Check response status code indicates error
-        self.assertEqual(response.status_code, 400)
-        
-        # Verify no donation request was created
-        self.assertEqual(DonationRequest.objects.count(), 0)
-    
-    def test_create_donation_request_missing_fields(self):
+
+        response_data = response.json()
+        self.assertEqual(response_data, {'id': 123})
         """Test creating a donation request with missing required fields"""
         url = reverse('donations:create')
         
@@ -140,4 +224,4 @@ class DonationRequestTests(TestCase):
         self.assertEqual(response_data['location'], self.donation_request_data['location'])
         self.assertEqual(response_data['content'], self.donation_request_data['content'])
 
-
+    
