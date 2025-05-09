@@ -1,4 +1,5 @@
 from drf_yasg import openapi
+from drf_yasg.inspectors import SwaggerAutoSchema
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
 import json
@@ -118,25 +119,27 @@ def test(request):
     
 
 class DonationRequestViewSet(viewsets.ViewSet):
-    @swagger_auto_schema(method='post', responses={201: DonationRequestIdSerializer})
-    @api_view(['POST'])
+    swagger_schema = SwaggerAutoSchema
+
+    @swagger_auto_schema(request_body=DonationRequestSerializer,
+    responses={201: DonationRequestIdSerializer})
     def create(self, request):
         serializer = DonationRequestSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             response_serializer = DonationRequestIdSerializer(serializer.instance.id)
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-        return Response(response_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
     
-    @swagger_auto_schema(method='get', responses={200: DonationRequestSerializer})
-    @api_view(['GET'])
+    @swagger_auto_schema(responses={200: DonationRequestSerializer})
     def retrieve(self, request, pk=None):
         queryset = DonationRequest.objects.all()
         donation_request = get_object_or_404(queryset, pk=pk)
         serializer = DonationRequestSerializer(donation_request)
         return Response(serializer.data)
     
-    @swagger_auto_schema(method='post', responses={200: DonationRequestIdSerializer})
+    @swagger_auto_schema(method='post', request_body=MatchRequestSerializer,
+    responses={200: DonationRequestIdSerializer})
     @action(detail=False, methods=['post'], url_path='match')
     def match(self, request):
         serializer = MatchRequestSerializer(data=request.data)
@@ -159,7 +162,10 @@ class DonationRequestViewSet(viewsets.ViewSet):
                 return Response(status=status.HTTP_404_NOT_FOUND)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @swagger_auto_schema(method='post', url_path='/match/select', responses={201: DonatorRegisteredIdSerializer})
+    @swagger_auto_schema(method='post', 
+    url_path='match/select',
+    request_body=DonatorRegisteredIdSerializer,
+    responses={201: DonatorRegisteredIdSerializer})
     @action(detail=False, methods=['post'], url_path='match/select')
     def select(self, request):
         """
@@ -176,10 +182,14 @@ class DonationRequestViewSet(viewsets.ViewSet):
         serializer = SelectedMatchRequestSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+            # TODO: update donation request with donator_registered_id -> donator_registered.
+            
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @swagger_auto_schema(method='post', url_path='match/reject', responses={201: MessageSerializer(data={})})
+    @swagger_auto_schema(method='post', url_path='match/reject', 
+    request_body=DonatorRegisteredIdSerializer,
+    responses={201: MessageSerializer(data={})})
     @action(detail=False, methods=['post'], url_path='match/reject')
     def reject(self, request):
         """
