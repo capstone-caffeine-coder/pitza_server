@@ -12,16 +12,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
-from .serializers import DonationRequestIdSerializer, DonationRequestSerializer, DonatorRegisteredIdSerializer, MatchRequestSerializer, MessageSerializer, RejectedMatchRequestSerializer, SelectedMatchRequestSerializer
+from .serializers import CreateDonationRequestSerializer, DonationRequestIdSerializer, DonationRequestSerializer, DonatorRegisteredIdSerializer, MatchRequestSerializer, MessageSerializer, RejectedMatchRequestSerializer, SelectedMatchRequestSerializer
 from .models import DonationRequest, SelectedMatchRequest, RejectedMatchRequest
 
-@swagger_auto_schema(method='get', responses={200: MessageSerializer(data={'message': 'Hello, world!'})})
-@api_view()
-def test(request):
-    """
-    Test endpoint
-    """
-    return Response({"message": "Hello, world!"})
 
 # @swagger_auto_schema(method='post', responses={201: DonationRequestIdSerializer})
 # @api_view(['POST'])
@@ -120,15 +113,33 @@ def test(request):
 
 class DonationRequestViewSet(viewsets.ViewSet):
     swagger_schema = SwaggerAutoSchema
+    
+    @swagger_auto_schema(method='get', url_path='test',
+    responses={200: MessageSerializer(data={'message': 'Hello, world!'})})
+    @action(detail=False, methods=['get'], url_path='test')
+    def test(self, request):
+        """
+        Test endpoint
+        """
+        return Response({"message": "Hello, world!"})
 
-    @swagger_auto_schema(request_body=DonationRequestSerializer,
+
+    @swagger_auto_schema(request_body=CreateDonationRequestSerializer,
     responses={201: DonationRequestIdSerializer})
     def create(self, request):
-        serializer = DonationRequestSerializer(data=request.data)
+        serializer = CreateDonationRequestSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            response_serializer = DonationRequestIdSerializer(serializer.instance.id)
-            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+            donation_request_serializer = DonationRequestSerializer(data=serializer.data)
+            if donation_request_serializer.is_valid():
+                donation_request_serializer.save()
+                response_serializer = DonationRequestIdSerializer(donation_request_serializer.instance.id)
+                return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                print(donation_request_serializer.errors)
+                return Response(donation_request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # else:
+        #     print(serializer.errors)
+        #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
     
     @swagger_auto_schema(responses={200: DonationRequestSerializer})

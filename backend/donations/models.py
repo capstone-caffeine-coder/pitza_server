@@ -28,7 +28,7 @@ class DonationRequest(models.Model):
     image = models.ImageField(upload_to='donation_requests/', null=True, blank=True)
     location = models.CharField(max_length=255)
     donation_due_date = models.DateField()
-    donator_registered = models.ForeignKey('auth.User', on_delete=models.SET_NULL, related_name='donations_registered', null=True, blank=True)
+    donator_registered_id = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
 
