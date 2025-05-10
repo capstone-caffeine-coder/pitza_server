@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Socket.IO 테스트</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+  <h1>Socket.IO 테스트</h1>
+  <input id="msg" placeholder="메시지 입력" />
+  <button onclick="sendMessage()">보내기</button>
+  <ul id="messages"></ul>
+
+  <script>
+    const socket = io("http://localhost:3000");
+
+    socket.on("connect", () => {
+      console.log("연결됨:", socket.id);
+    });
+
+    socket.on("chat message", (data) => {
+      const li = document.createElement("li");
+      li.textContent = `${data}`;
+      document.getElementById("messages").appendChild(li);
+    });
+
+    function sendMessage() {
+      const msg = document.getElementById("msg").value;
+      socket.emit("chat message", msg); 
+    }
+  </script>
+</body>
+</html>
