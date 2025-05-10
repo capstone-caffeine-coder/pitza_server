@@ -6,21 +6,24 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
+from drf_yasg import openapi
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
-from .serializers import CreateDonationRequestSerializer, DonationRequestIdSerializer, DonationRequestSerializer, DonatorRegisteredIdSerializer, MatchRequestSerializer, MessageSerializer, RejectedMatchRequestSerializer, SelectedMatchRequestSerializer
+from .serializers import CreateDonationRequestSerializer, DonationRequestIdSerializer, DonationRequestSerializer, DonatorRegisteredIdSerializer, MatchRequestSerializer, MessageSerializer, RejectedMatchRequestSerializer, SelectedMatchRequestSerializer, TestSerializer
 from .models import DonationRequest
 
 class DonationRequestViewSet(viewsets.ViewSet):
     swagger_schema = SwaggerAutoSchema
     
-    @swagger_auto_schema(method='get', url_path='test',
-    responses={200: MessageSerializer(data={'message': 'Hello, world!'})})
+    @swagger_auto_schema(method='get',
+                         responses={200: MessageSerializer})
     @action(detail=False, methods=['get'], url_path='test')
     def test(self, request):
-        """
-        Test endpoint
-        """
+        # Save the file to MinIO storage bucket name: pitza-media
+        default_storage.save('test.png', ContentFile(open('test.png', 'rb').read()))
         return Response({"message": "Hello, world!"})
+  
 
 
     @swagger_auto_schema(request_body=CreateDonationRequestSerializer,

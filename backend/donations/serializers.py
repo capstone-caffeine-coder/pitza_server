@@ -72,4 +72,4 @@ class MatchRequestSerializer(serializers.Serializer):
     sex = serializers.CharField()
     location = serializers.CharField()
     next_donation_date = serializers.DateField()
-    
+

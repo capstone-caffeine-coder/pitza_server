@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-v0yld&tv!_b!yxr8_h-#6p&$b$0*&ep3+7)u9bt_)qeb5_3km#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -40,13 +40,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'donations.apps.DonationsConfig',
-    'storages',  # Add django-storages app
-    'drf_yasg'
+    'minio_storage',  
+    'drf_yasg',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -89,6 +91,9 @@ DATABASES = {
             # Example: Ensures UTF8MB4 is used for the connection
             'charset': 'utf8mb4', 
         },
+    },
+    'test': {
+        'NAME': f"test_{os.environ.get('DB_NAME')}",
     }
 }
 
@@ -122,25 +127,38 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+
+# MinIO Storage Settings
+
+MINIO_STORAGE_BACKENDS = {
+    "default": {
+        "bucket_name": "pitza",
+    },
+}
+
+DEFAULT_FILE_STORAGE = "minio_storage.storage.MinioMediaStorage"
+
+MINIO_STORAGE_ENDPOINT = os.environ.get('MINIO_ENDPOINT', 'minio:9000')
+MINIO_STORAGE_ACCESS_KEY = os.environ.get('MINIO_STORAGE_ACCESS_KEY')
+MINIO_STORAGE_SECRET_KEY = os.environ.get('MINIO_STORAGE_SECRET_KEY')
+MINIO_STORAGE_AUTO_CREATE_MEDIA_BUCKET = True
+MINIO_STORAGE_AUTO_CREATE_STATIC_BUCKET = True
+MINIO_STORAGE_USE_HTTPS = False
+MINIO_STORAGE_MEDIA_BUCKET_NAME = 'pitza-media'
+MINIO_STORAGE_STATIC_BUCKET_NAME = 'pitza-static'
+MINIO_STORAGE_MEDIA_USE_PRESIGNED = True
+MINIO_STORAGE_STATIC_USE_PRESIGNED = True
+
+# Add CORS settings for MinIO
+CORS_ALLOW_ALL_ORIGINS = True  # Only for development
+CORS_ALLOW_CREDENTIALS = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# MinIO Storage Settings
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-AWS_ACCESS_KEY_ID = os.environ.get('MINIO_ROOT_USER')
-AWS_SECRET_ACCESS_KEY = os.environ.get('MINIO_ROOT_PASSWORD')
-AWS_STORAGE_BUCKET_NAME = os.environ.get('MINIO_BUCKET_NAME', 'donations')
-AWS_S3_ENDPOINT_URL = os.environ.get('MINIO_ENDPOINT', 'http://minio:9000')
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=86400',
-}
-AWS_DEFAULT_ACL = 'public-read'
-AWS_QUERYSTRING_AUTH = False

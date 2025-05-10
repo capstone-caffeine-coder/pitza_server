@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 # Create your models here.
 
@@ -21,7 +22,7 @@ class DonationRequest(models.Model):
     
     requester = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='donation_requests')
     name = models.CharField(max_length=255)
-    age = models.IntegerField(min_value=16, max_value=70)
+    age = models.IntegerField(validators=[MinValueValidator(16), MaxValueValidator(70)])
     sex = models.CharField(max_length=1, choices=SEX_CHOICES)
     blood_type = models.CharField(max_length=3, choices=BLOOD_TYPE_CHOICES)
     content = models.TextField()
