@@ -85,13 +85,14 @@ class DonationRequestViewSet(viewsets.ViewSet):
         """
         serializer = SelectedMatchRequestSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()        
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            serializer.save() 
+            response_serializer = DonatorRegisteredIdSerializer(serializer.instance.donator_registered_id)       
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @swagger_auto_schema(method='post', url_path='match/reject', 
     request_body=RejectedMatchRequestSerializer,
-    responses={201: MessageSerializer(data={})})
+    responses={201: MessageSerializer})
     @action(detail=False, methods=['post'], url_path='match/reject')
     def reject(self, request):
         """
@@ -100,7 +101,8 @@ class DonationRequestViewSet(viewsets.ViewSet):
         serializer = RejectedMatchRequestSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            response_serializer = MessageSerializer(data={'message': 'Match rejected'})
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
