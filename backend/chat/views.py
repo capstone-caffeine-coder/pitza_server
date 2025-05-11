@@ -66,3 +66,26 @@ def chat_room_detail(request, room_id):
         import traceback
         traceback.print_exc()
         return Response({'error': str(e)}, status=500)
+
+'''
+@api_view(['POST'])
+@permission_classes([AllowAny])  # WebSocket 서버에서 요청하므로 인증 생략 가능
+def save_message(request):
+    try:
+        room_id = request.data.get("room_id")
+        sender_id = request.data.get("sender_id")
+        content = request.data.get("content")
+
+        chatroom = ChatRoom.objects.get(id=room_id)
+        sender = User.objects.get(id=sender_id)
+
+        message = Message.objects.create(
+            chatroom=chatroom,
+            sender=sender,
+            content=content
+        )
+        serializer = MessageSerializer(message)
+        return Response(serializer.data, status=201)
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+    '''
