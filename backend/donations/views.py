@@ -6,11 +6,10 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
-from drf_yasg import openapi
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
-from .serializers import CreateDonationRequestSerializer, DonationRequestIdSerializer, DonationRequestSerializer, DonatorRegisteredIdSerializer, MatchRequestSerializer, MessageSerializer, RejectedMatchRequestSerializer, SelectedMatchRequestSerializer, TestSerializer
+from .serializers import CreateDonationRequestSerializer, DonationRequestIdSerializer, DonationRequestSerializer, DonatorRegisteredIdSerializer, MatchRequestSerializer, MessageSerializer, RejectedMatchRequestSerializer, SelectedMatchRequestSerializer
 from .models import DonationRequest
 
 class DonationRequestViewSet(viewsets.ViewSet):
