@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from django.contrib.auth.models import User
-from .models import ChatRoom
+from .models import ChatRoom, ChatParticipant, Message
 from .serializers import ChatRoomSerializer, ChatRoomListSerializer, ChatRoomDetailSerializer
 
 from rest_framework.permissions import AllowAny
@@ -12,13 +12,14 @@ from rest_framework.decorators import api_view, permission_classes
 
 
 class ChatRoomCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+    #permission_classes = [IsAuthenticated]
 
     def post(self, request):
         post_id = request.data.get("post_id")
         receiver_id = request.data.get("receiver_id")
-        sender = request.user
-
+        sender = User.objects.get(id=1)
+        #sender = request.user
         try:
             receiver = User.objects.get(id=receiver_id)
         except User.DoesNotExist:
@@ -92,6 +93,39 @@ def chat_room_detail(request, room_id):
         import traceback
         traceback.print_exc()
         return Response({'error': str(e)}, status=500)
+
+class ReadMessageUpdateView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, room_id):
+        try:
+            user_id = request.data.get("user_id")  # 추후 request.user로 대체
+            last_read_message_id = request.data.get("last_read_message_id")
+
+            if not last_read_message_id:
+                return Response({"error": "last_read_message_id is required"}, status=400)
+
+            user = User.objects.get(id=user_id)
+            chatroom = ChatRoom.objects.get(id=room_id)
+            message = Message.objects.get(id=last_read_message_id, chatroom=chatroom)
+
+            participant, created = ChatParticipant.objects.get_or_create(user=user, chatroom=chatroom)
+            participant.last_read_message = message
+            participant.save()
+
+            message.is_read = True
+            message.save()
+
+            return Response({"success": True})
+
+        except User.DoesNotExist:
+            return Response({"error": "Invalid user ID"}, status=400)
+        except ChatRoom.DoesNotExist:
+            return Response({"error": "ChatRoom not found"}, status=404)
+        except Message.DoesNotExist:
+            return Response({"error": "Message not found in room"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

@@ -15,3 +15,11 @@ class Message(models.Model):
 
     message_type = models.CharField(max_length=10, default='text')  # 'text' or 'image'
     image_url = models.URLField(blank=True, null=True)  # 이미지 저장용 URL
+
+class ChatParticipant(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    chatroom = models.ForeignKey(ChatRoom, on_delete=models.CASCADE)
+    last_read_message = models.ForeignKey(Message, null=True, blank=True, on_delete=models.SET_NULL)
+
+    class Meta:
+        unique_together = ('user', 'chatroom')
