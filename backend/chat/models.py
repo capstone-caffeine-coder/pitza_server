@@ -12,3 +12,6 @@ class Message(models.Model):
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
+
+    message_type = models.CharField(max_length=10, default='text')  # 'text' or 'image'
+    image_url = models.URLField(blank=True, null=True)  # 이미지 저장용 URL
