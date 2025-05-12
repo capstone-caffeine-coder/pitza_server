@@ -47,3 +47,6 @@ data/db/
 
 # Node.js
 node_modules/
+
+# Minio internal system files
+data/minio/.minio.sys/
