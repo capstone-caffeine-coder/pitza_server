@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from django.contrib.auth.models import User
 from .models import ChatRoom
-from .serializers import ChatRoomSerializer, ChatRoomDetailSerializer
+from .serializers import ChatRoomSerializer, ChatRoomListSerializer, ChatRoomDetailSerializer
 
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
@@ -49,19 +49,45 @@ class ChatRoomCreateView(APIView):
 @permission_classes([AllowAny])
 def chatroom_list(request):
     # user = request.user
-    # chatrooms = ChatRoom.objects.filter(participants=user).order_by('-created_at')
-    chatrooms = ChatRoom.objects.all()
 
-    serializer = ChatRoomSerializer(chatrooms, many=True, context={'request': request})
+    # 테스트 편의상 sender_id 쿼리 파라미터로 사용자 ID를 받아 처리
+    user_id = request.query_params.get('user_id')
+    if not user_id:
+        return Response({"error": "required user_id"}, status=400)
+    
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"error": "Invalid user_id"}, status=400)
+
+    chatrooms = ChatRoom.objects.filter(participants=user).order_by('-created_at')
+    serializer = ChatRoomListSerializer(chatrooms, many=True, context={'request': request, 'user': user})
     return Response(serializer.data)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def chat_room_detail(request, room_id):
+    # user = request.user
+    user_id = request.query_params.get('user_id')
+    if not user_id:
+        return Response({"error": "required user_id"}, status=400)
+
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"error": "Invalid user_id"}, status=400)
+
     try:
         room = ChatRoom.objects.prefetch_related('messages__sender', 'participants').get(id=room_id)
+        
+        # 요청 유저가 이 방의 참가자인지 확인
+        if user not in room.participants.all():
+            return Response({"error": "not a participant"}, status=403)
+
         serializer = ChatRoomDetailSerializer(room)
         return Response(serializer.data)
+    except ChatRoom.DoesNotExist:
+        return Response({'error': 'ChatRoom not found'}, status=404)
     except Exception as e:
         import traceback
         traceback.print_exc()

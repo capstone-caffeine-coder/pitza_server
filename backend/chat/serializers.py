@@ -15,14 +15,18 @@ class ChatRoomSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'participants', 'created_at']
 
 class ChatRoomListSerializer(serializers.ModelSerializer):
+    chatroom_id = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
     last_message_at = serializers.SerializerMethodField()
-    participant = serializers.SerializerMethodField()
+    partner = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatRoom
-        fields = ['id', 'participant', 'last_message', 'last_message_at', 'unread_count']
+        fields = ['chatroom_id', 'partner', 'last_message', 'last_message_at', 'unread_count']
+    
+    def get_chatroom_id(self, obj):
+        return str(obj.id)
 
     def get_last_message(self, obj):
         last_msg = obj.messages.order_by('-timestamp').first()
@@ -32,28 +36,18 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         last_msg = obj.messages.order_by('-timestamp').first()
         return last_msg.timestamp.isoformat() if last_msg else None
 
-    def get_participant(self, obj):
-        user = self.context['request'].user
-        other = obj.participants.exclude(id=user.id).first()
-        return other.username if other else "알 수 없음"
-
-        '''
-        # user 모델 변경 필요
-        profile_image_url = None
-        if hasattr(other, 'profile_image') and other.profile_image: # 프로필 이미지 존재 유저
-            request = self.context.get('request')
-            if request:
-                profile_image_url = request.build_absolute_uri(other.profile_image.url)
-
+    def get_partner(self, obj):
+        user = self.context['request'].user  # 현재 요청한 사용자
+        other = obj.participants.exclude(id=user.id).first()  # 현재 사용자를 제외한 상대방
         return {
             "id": other.id,
-            "username": other.username,
-            "image": profile_image_url
-        }
-        '''
+            "name": other.username  # 상대방의 ID와 닉네임
+        } if other else None
 
     def get_unread_count(self, obj):
-        user = self.context['request'].user
+        user = self.context.get('user')
+        if user is None:
+            return 0
         return obj.messages.filter(is_read=False).exclude(sender=user).count()
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -63,7 +57,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ['sender', 'message', 'sent_at', 'is_read']
+        fields = ['sender', 'message', 'message_type', 'image_url', 'sent_at', 'is_read']
 
 class ChatRoomDetailSerializer(serializers.ModelSerializer):
     messages = MessageSerializer(many=True)
