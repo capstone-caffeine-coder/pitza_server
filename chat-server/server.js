@@ -9,9 +9,6 @@ const mysql = require('mysql2');
 const Minio = require('minio');
 const { log } = require('console');
 
-// const path = require('path');
-// app.use(express.static(path.join(__dirname, 'public')));
-
 // 인증 미들웨어
 function authenticate(socket, next) {
   socket.user = { id: 1, name: "TestUser" }; // TODO: 실제 인증 구현 필요
@@ -165,7 +162,7 @@ Promise.all([
         await uploadImageToMinio(buffer, filename);
 
         // const imageUrl = `http://${process.env.MINIO_HOST}:${process.env.MINIO_PORT}/${bucketName}/${filename}`;
-        const imageUrl = `http://localhost:${process.env.MINIO_PORT}/${bucketName}/${filename}`;
+        const imageUrl = `http://${process.env.HOST_PUBLIC_MINIO}:${process.env.MINIO_PORT}/${bucketName}/${filename}`;
 
         const timestamp = sendChatMessage({
           roomId,
