@@ -9,6 +9,7 @@ from .serializers import ChatRoomSerializer, ChatRoomListSerializer, ChatRoomDet
 
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
+from django.shortcuts import get_object_or_404
 
 
 class ChatRoomCreateView(APIView):

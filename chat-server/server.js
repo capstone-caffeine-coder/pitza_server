@@ -125,6 +125,44 @@ Promise.all([
       console.log(`${socket.id} -> 방 참가: ${roomId}`);
     });
 
+    // 메시지 읽음 처리
+    // socket.on('read_message', ({ roomId, messageId, userId }) => {
+    //   console.log(`메시지 읽음 처리 수신: 메시지 ID = ${messageId} | 방 = ${roomId} | 사용자 = ${userId}`);
+
+    //   // MySQL에서 읽음 처리 로직
+    //   const query = `
+    //     UPDATE chat_message
+    //     SET is_read = true
+    //     WHERE id = ? AND chatroom_id = ? AND sender_id != ?
+    //   `;
+    //   const values = [messageId, roomId, userId]; // 자기 자신이 보낸 메시지는 제외
+
+    //   db.query(query, values, (err, result) => {
+    //     if (err) {
+    //       console.error('MySQL 읽음 처리 오류:', err.message);
+    //       socket.emit('error', { message: '읽음 처리 오류' });
+    //     } else {
+    //       console.log('MySQL에서 메시지 읽음 처리 성공');
+    //       // ChatParticipant 테이블의 마지막 읽은 메시지 갱신
+    //       const updateLastReadQuery = `
+    //         UPDATE chat_participant
+    //         SET last_read_message_id = ?
+    //         WHERE chatroom_id = ? AND user_id = ?
+    //       `;
+    //       db.query(updateLastReadQuery, [messageId, roomId, userId], (err) => {
+    //         if (err) {
+    //           console.error('MySQL에서 ChatParticipant 읽음 처리 오류:', err.message);
+    //           socket.emit('error', { message: 'ChatParticipant 읽음 처리 오류' });
+    //         } else {
+    //           console.log('ChatParticipant의 마지막 읽은 메시지 갱신 성공');
+    //           // 메시지를 읽었음을 클라이언트에 알림
+    //           io.to(roomId).emit('message_read', { messageId, userId });
+    //         }
+    //       });
+    //     }
+    //   });
+    // });
+
     socket.on('chat message:text', async ({ roomId, message, userId }) => {
       console.log(`텍스트 메시지 수신: ${message} | 방: ${roomId} | 사용자: ${userId}`);
 
