@@ -92,7 +92,7 @@ def kakao_callback(request):
     ).json()
 
     kakao_id = str(user_info["id"])
-    nickname = user_info["properties"].get("nickname")
+    # nickname = user_info["properties"].get("nickname") # 이걸 돌리면 회원가입 때도 profile_setup으로 가지 않음.
     profile_image = user_info["properties"].get("profile_image")
 
     user, created = User.objects.get_or_create(
@@ -101,7 +101,7 @@ def kakao_callback(request):
     )
     request.session['user'] = f"카카오:{kakao_id}"
 
-    if nickname:
+    if user.nickname:
         return redirect('/home/')
     else:
         return redirect('/profile/setup/')
