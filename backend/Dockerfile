@@ -24,6 +24,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     default-libmysqlclient-dev \
  && rm -rf /var/lib/apt/lists/*
 
+# 이유경 추가
+# Copy the wait-for-it.sh script into the container
+COPY wait-for-it.sh /usr/local/bin/wait-for-it.sh
+
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/go/dockerfile-user-best-practices/
 ARG UID=10001

@@ -7,8 +7,14 @@ from django.db import connection
 from urllib.parse import urlencode
 import requests
 from login.models import User
+import os
 
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI')
 
+KAKAO_CLIENT_ID = os.environ.get('KAKAO_CLIENT_ID')
+KAKAO_REDIRECT_URI = os.environ.get('KAKAO_REDIRECT_URI')
 
 def login_view(request):
     return render(request, 'login/login.html')
