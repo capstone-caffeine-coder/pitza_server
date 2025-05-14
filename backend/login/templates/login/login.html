@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0; /* Remove default body margin */
+        }
+        .container {
+            background-color: #fff;
+            padding: 40px; /* Increased padding */
+            border-radius: 10px; /* More rounded corners */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); /* Stronger shadow */
+            text-align: center;
+            width: 90%; /* Make container responsive */
+            max-width: 400px; /* Max width for larger screens */
+        }
+        h1 {
+            margin-bottom: 30px; /* Increased margin */
+            color: #333;
+        }
+        .login-button {
+            display: block;
+            width: 100%;
+            padding: 12px; /* Increased padding */
+            margin-bottom: 18px; /* Increased margin */
+            border: none;
+            border-radius: 6px; /* Slightly more rounded buttons */
+            cursor: pointer;
+            font-size: 17px; /* Slightly larger font */
+            text-decoration: none;
+            color: white;
+            transition: background-color 0.3s ease; /* Smooth hover effect */
+        }
+        .login-button:last-child {
+            margin-bottom: 0; /* No bottom margin for the last button */
+        }
+        .login-button:hover {
+            opacity: 0.9; /* Slight transparency on hover */
+        }
+
+        .google-button {
+            background-color: #dd4b39; /* Google red */
+        }
+        .kakao-button {
+            background-color: #fee500; /* Kakao yellow */
+            color: #3c1e1e; /* Kakao dark color */
+        }
+         .kakao-button:hover {
+             background-color: #fada00; /* Slightly darker yellow on hover */
+         }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Login</h1>
+        {# Corrected from {{ url_for('login_google') }} #}
+        <a href="{% url 'login_google' %}" class="login-button google-button">Login with Google</a>
+        {# Corrected from {{ url_for('login_kakao') }} #}
+        <a href="{% url 'login_kakao' %}" class="login-button kakao-button">Login with Kakao</a>
+
+        </div>
+</body>
+</html>
