@@ -1,13 +1,10 @@
-from django.shortcuts import render
-
-# login/views.py
-
 from django.shortcuts import render, redirect
-from django.db import connection
 from urllib.parse import urlencode
 import requests
-from login.models import User
 import os
+
+
+from login.models import User
 
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
@@ -18,7 +15,6 @@ KAKAO_REDIRECT_URI = os.environ.get('KAKAO_REDIRECT_URI')
 
 def login_view(request):
     return render(request, 'login/login.html')
-
 
 def login_google(request):
     auth_endpoint = "https://accounts.google.com/o/oauth2/v2/auth"
