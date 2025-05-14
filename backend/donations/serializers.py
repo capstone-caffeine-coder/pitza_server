@@ -6,7 +6,7 @@ class DonationRequestSerializer(serializers.HyperlinkedModelSerializer):
     requester = serializers.HyperlinkedRelatedField(
         queryset=User.objects.all(),
         # TODO: Replace with the actual view name of the User model
-        view_name='user-detail' 
+        view_name='user_detail' 
     ) 
 
     class Meta:
