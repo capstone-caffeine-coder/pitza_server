@@ -4,17 +4,19 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from django.contrib.auth.models import User
-from .models import ChatRoom, ChatParticipant, Message
-from .serializers import ChatRoomSerializer, ChatRoomListSerializer, ChatRoomDetailSerializer
 
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
+from drf_yasg.utils import swagger_auto_schema
 
+from .models import ChatRoom, ChatParticipant, Message
+from .serializers import ChatRoomSerializer, ChatRoomListSerializer, ChatRoomDetailSerializer
 
 class ChatRoomCreateView(APIView):
     permission_classes = [AllowAny]
     #permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(request_body=ChatRoomSerializer,responses={201: ChatRoomSerializer})
     def post(self, request):
         post_id = request.data.get("post_id")
         receiver_id = request.data.get("receiver_id")
@@ -47,6 +49,7 @@ class ChatRoomCreateView(APIView):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 @api_view(['GET'])
+@swagger_auto_schema(responses={200: ChatRoomListSerializer(many=True)})
 @permission_classes([AllowAny])
 def chatroom_list(request):
     # user = request.user
@@ -66,6 +69,7 @@ def chatroom_list(request):
     return Response(serializer.data)
 
 @api_view(['GET'])
+@swagger_auto_schema(responses={200: ChatRoomDetailSerializer})
 @permission_classes([AllowAny])
 def chat_room_detail(request, room_id):
     # user = request.user
@@ -97,6 +101,7 @@ def chat_room_detail(request, room_id):
 class ReadMessageUpdateView(APIView):
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(request_body=ChatRoomSerializer, responses={200: 'Success'})
     def post(self, request, room_id):
         try:
             user_id = request.data.get("user_id")  # 추후 request.user로 대체
@@ -128,6 +133,7 @@ class ReadMessageUpdateView(APIView):
             return Response({"error": str(e)}, status=500)
 
 @api_view(['POST'])
+@swagger_auto_schema(request_body=ChatRoomSerializer, responses={200: 'Success'})
 @permission_classes([AllowAny])
 def leave_chat_room(request, room_id):
     try:
