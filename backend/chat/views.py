@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from django.contrib.auth.models import User
-from .models import ChatRoom, ChatParticipant, Message
+from .models import ChatRoom, ChatParticipant, Message, Report
 from .serializers import ChatRoomSerializer, ChatRoomListSerializer, ChatRoomDetailSerializer
 
 from rest_framework.permissions import AllowAny
@@ -142,6 +142,72 @@ def leave_chat_room(request, room_id):
             return Response({'message': '채팅방에서 나갔습니다.'}, status=200)
         else:
             return Response({'error': '채팅방에 없는 사용자입니다.'}, status=400)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({'error': str(e)}, status=500)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])  # 인증 없이 호출 가능
+def report_message(request, room_id):
+    try:
+        chatroom = get_object_or_404(ChatRoom, id=room_id)
+
+        user_id = request.data.get('user_id')
+        message_ids = request.data.get('message_id')
+        reason = request.data.get('reason')
+        description = request.data.get('description')
+
+        if not user_id or not message_ids or not reason or not description:
+            return Response({
+                "error": "required user_id, message_id, reason, description"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            reporter = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "Invalid user ID"}, status=400)
+
+        # 메시지 유효성 검증
+        messages = Message.objects.filter(id__in=message_ids, chatroom=chatroom)
+        if messages.count() != len(message_ids):
+            return Response({
+                "error": "일부 메시지가 존재하지 않거나 채팅방에 속하지 않습니다."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 신고 저장 (중복 신고 방지)
+        created_reports = []
+        for message in messages:
+            already_reported = Report.objects.filter(
+                chatroom=chatroom,
+                message=message,
+                reporter=reporter
+            ).exists()
+
+            if already_reported:
+                continue
+
+            report = Report.objects.create(
+                chatroom=chatroom,
+                message=message,
+                reporter=reporter,
+                reason=reason,
+                description=description
+            )
+            created_reports.append(report)
+
+        if not created_reports:
+            return Response({
+                "status": "skipped",
+                "message": "이미 모든 메시지가 신고된 상태입니다."
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "report_id": str(created_reports[0].id),
+            "status": "received",
+            "message": "신고가 접수되었습니다."
+        }, status=status.HTTP_201_CREATED)
+
     except Exception as e:
         import traceback
         traceback.print_exc()
