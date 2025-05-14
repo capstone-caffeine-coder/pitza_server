@@ -44,3 +44,10 @@ data/
 
 # env
 .env
+
+# Node.js
+node_modules/
+
+# Minio internal system files
+data/minio/
+

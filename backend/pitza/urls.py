@@ -42,6 +42,7 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     # project
     path('admin/', admin.site.urls),
+    path('chat/', include('chat.urls')),
 ]
 
 urlpatterns += router.urls
