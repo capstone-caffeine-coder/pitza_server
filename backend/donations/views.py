@@ -8,6 +8,8 @@ from rest_framework import status
 from rest_framework.decorators import action
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from django.db.models import Case, When, IntegerField # Import necessary functions
+from datetime import timedelta
 
 from .serializers import CreateDonationRequestSerializer, DonationRequestIdSerializer, DonationRequestSerializer, DonatorRegisteredIdSerializer, MatchRequestSerializer, MessageSerializer, RejectedMatchRequestSerializer, SelectedMatchRequestSerializer
 from .models import DonationRequest
@@ -23,8 +25,6 @@ class DonationRequestViewSet(viewsets.ViewSet):
         default_storage.save('test.png', ContentFile(open('test.png', 'rb').read()))
         return Response({"message": "Hello, world!"})
   
-
-
     @swagger_auto_schema(request_body=CreateDonationRequestSerializer,
     responses={201: DonationRequestIdSerializer})
     def create(self, request):
@@ -32,8 +32,8 @@ class DonationRequestViewSet(viewsets.ViewSet):
         if serializer.is_valid():
             donation_request_serializer = DonationRequestSerializer(data=serializer.data)
             if donation_request_serializer.is_valid():
-                donation_request_serializer.save()
-                response_serializer = DonationRequestIdSerializer(donation_request_serializer.instance.id)
+                donation_request = donation_request_serializer.save()
+                response_serializer = DonationRequestIdSerializer(donation_request)
                 return Response(response_serializer.data, status=status.HTTP_201_CREATED)
             else:
                 print(donation_request_serializer.errors)
@@ -42,11 +42,9 @@ class DonationRequestViewSet(viewsets.ViewSet):
         #     print(serializer.errors)
         #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-    
     @swagger_auto_schema(responses={200: DonationRequestSerializer})
-    def retrieve(self, pk=None):
-        queryset = DonationRequest.objects.all()
-        donation_request = get_object_or_404(queryset, pk=pk)
+    def retrieve(self, request, pk):
+        donation_request = get_object_or_404(DonationRequest, pk=pk)
         serializer = DonationRequestSerializer(donation_request)
         return Response(serializer.data)
     
@@ -56,19 +54,57 @@ class DonationRequestViewSet(viewsets.ViewSet):
     def match(self, request):
         serializer = MatchRequestSerializer(data=request.data)
         if serializer.is_valid():
+            
+            # Calculate the date range for the next donation date
             next_donation_date = datetime.datetime.strptime(serializer.data['next_donation_date'], '%Y-%m-%d').date()
-            # Add a 7-day buffer before and after the donation due date
+              
+            requested_blood_type = serializer.validated_data['blood_type']
+            requested_sex = serializer.validated_data['sex']
+            requested_location = serializer.validated_data['location']
+            requested_age = serializer.validated_data['age']
+            
+            # Set the ranges for age and date
+            age_min = requested_age - 5
+            age_max = requested_age + 5
+            date_min = next_donation_date - timedelta(days=7)
+            date_max = next_donation_date + timedelta(days=7)
+            
+            # Filter the queryset based on the blood type
             queryset = DonationRequest.objects.filter(
-                blood_type=serializer.data['blood_type'],
-                sex=serializer.data['sex'],
-                location=serializer.data['location'],
-                age__gte=serializer.data['age'] - 5,
-                age__lte=serializer.data['age'] + 5,
-                donation_due_date__gte=next_donation_date - datetime.timedelta(days=7),
-                donation_due_date__lte=next_donation_date + datetime.timedelta(days=7)
+                blood_type=requested_blood_type,
+                donation_due_date__gte=date_min,  
+                donation_due_date__lte=date_max
+                
             )
+
+            # Filter the queryset based on sex, location, age, and date
+            queryset = queryset.annotate(
+                matches_sex=Case(
+                    When(sex=requested_sex, then=1),
+                    default=0,
+                    output_field=IntegerField()
+                ),
+                matches_location=Case(
+                    When(location=requested_location, then=1),
+                    default=0,
+                    output_field=IntegerField()
+                ),
+                matches_age_range=Case(
+                    When(age__gte=age_min, age__lte=age_max, then=1),
+                    default=0,
+                    output_field=IntegerField()
+                ),
+            )
+
+            queryset = queryset.order_by(
+                '-matches_location',
+                '-matches_sex',       
+                '-matches_age_range',  
+                '-matches_date_range', 
+            )
+            
             if queryset.exists():
-                response_serializer = DonationRequestIdSerializer(queryset.first().id)
+                response_serializer = DonationRequestIdSerializer(queryset.first())
                 return Response(response_serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response({"message": "No matching donation requests found"}, status=status.HTTP_404_NOT_FOUND)

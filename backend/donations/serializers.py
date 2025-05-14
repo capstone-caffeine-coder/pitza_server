@@ -2,11 +2,9 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import DonationRequest, RejectedMatchRequest, SelectedMatchRequest
 
-class DonationRequestSerializer(serializers.HyperlinkedModelSerializer):
-    requester = serializers.HyperlinkedRelatedField(
+class DonationRequestSerializer(serializers.ModelSerializer):
+    requester = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
-        # TODO: Replace with the actual view name of the User model
-        view_name='user_detail' 
     ) 
 
     class Meta:
@@ -25,31 +23,23 @@ class CreateDonationRequestSerializer(serializers.Serializer):
     donator_registered_id = serializers.IntegerField()
 
 
-class RejectedMatchRequestSerializer(serializers.HyperlinkedModelSerializer):
-    user = serializers.HyperlinkedRelatedField(
+class RejectedMatchRequestSerializer(serializers.ModelSerializer):
+    user =serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
-        # TODO: Replace with the actual view name of the User model
-        view_name='user-detail' 
     )
-    donation_request = serializers.HyperlinkedRelatedField(
+    donation_request =serializers.PrimaryKeyRelatedField(
         queryset=DonationRequest.objects.all(),
-        # TODO: Replace with the actual view name of the DonationRequest model
-        view_name='donations-retrieve' 
     )
     class Meta:
         model = RejectedMatchRequest
         fields = ['id', 'user', 'donation_request']
 
-class SelectedMatchRequestSerializer(serializers.HyperlinkedModelSerializer):
-    user = serializers.HyperlinkedRelatedField(
+class SelectedMatchRequestSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
-        # TODO: Replace with the actual view name of the User model
-        view_name='user-detail' 
     )
-    donation_request = serializers.HyperlinkedRelatedField(
+    donation_request = serializers.PrimaryKeyRelatedField(
         queryset=DonationRequest.objects.all(),
-        # TODO: Replace with the actual view name of the DonationRequest model
-        view_name='donations-retrieve' 
     )
     class Meta:
         model = SelectedMatchRequest
