@@ -37,11 +37,13 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         return last_msg.timestamp.isoformat() if last_msg else None
 
     def get_partner(self, obj):
-        user = self.context['request'].user  # 현재 요청한 사용자
+        # user = self.context['request'].user  # 현재 요청한 사용자
+        user = self.context.get('user') # 테스트를 위함
         other = obj.participants.exclude(id=user.id).first()  # 현재 사용자를 제외한 상대방
         return {
             "id": other.id,
-            "name": other.username  # 상대방의 ID와 닉네임
+            "name": other.username,  # 상대방의 ID와 닉네임
+            "profileImage": getattr(other, 'profile_picture', '')  # 없으면 빈 문자열
         } if other else None
 
     def get_unread_count(self, obj):

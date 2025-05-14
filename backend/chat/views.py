@@ -70,6 +70,7 @@ def chatroom_list(request):
 @permission_classes([AllowAny])
 def chat_room_detail(request, room_id):
     # user = request.user
+    # 테스트 목적
     user_id = request.query_params.get('user_id')
     if not user_id:
         return Response({"error": "required user_id"}, status=400)
@@ -100,7 +101,7 @@ class ReadMessageUpdateView(APIView):
 
     def post(self, request, room_id):
         try:
-            user_id = request.data.get("user_id")  # 추후 request.user로 대체
+            user_id = request.data.get("user_id")  # 추후 request.user로 대체(테스트 목적)
             last_read_message_id = request.data.get("last_read_message_id")
 
             if not last_read_message_id:
