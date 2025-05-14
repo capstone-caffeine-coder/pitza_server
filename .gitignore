@@ -40,7 +40,7 @@ db.sqlite3-journal
 .ruff_cache/
 
 # Docker
-data/db/
+data/
 
 # env
 .env
@@ -49,4 +49,5 @@ data/db/
 node_modules/
 
 # Minio internal system files
-data/minio/.minio.sys/
+data/minio/
+
