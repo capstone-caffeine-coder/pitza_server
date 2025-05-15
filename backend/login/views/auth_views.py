@@ -56,9 +56,9 @@ def google_callback(request):
     request.session['user'] = email
 
     if user.nickname:
-        return redirect('/home/')
+        return redirect('http://localhost:5173/')
     else:
-        return redirect('/profile/setup/')
+        return redirect('http://localhost:5173/profile/setup/')
 
 
 
@@ -98,6 +98,6 @@ def kakao_callback(request):
     request.session['user'] = f"카카오:{kakao_id}"
 
     if user.nickname:
-        return redirect('/home/')
+        return redirect('http://localhost:5173/')
     else:
-        return redirect('/profile/setup/')
+        return redirect('http://localhost:5173/profile/setup/')
