@@ -11,6 +11,8 @@ from django.core.files.base import ContentFile
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.db.models import Case, When, IntegerField # Import necessary functions
 from datetime import timedelta
+from django.core.files.storage import storages
+from django.core.files import File
 
 from .serializers import CreateDonationRequestSerializer, DonationRequestIdSerializer, DonationRequestSerializer, DonatorRegisteredIdSerializer, MatchRequestSerializer, MessageSerializer, RejectedMatchRequestSerializer, SelectedMatchRequestSerializer
 from .models import DonationRequest
@@ -31,10 +33,28 @@ class DonationRequestViewSet(viewsets.ViewSet):
     responses={201: DonationRequestIdSerializer})
     def create(self, request):
         serializer = CreateDonationRequestSerializer(data=request.data)
+        
+    
+        
         if serializer.is_valid():
-            donation_request_serializer = DonationRequestSerializer(data=serializer.data)
+
+            validated_data = serializer.validated_data
+            image_file = validated_data.get('image', None)
+            copied_validated_data = validated_data.copy()
+            
+            if 'image' in copied_validated_data:
+               del copied_validated_data['image']
+            
+            donation_request_serializer = DonationRequestSerializer(data=copied_validated_data)
+
             if donation_request_serializer.is_valid():
                 donation_request = donation_request_serializer.save()
+                
+                if image_file:
+                    django_file = File(image_file, name=image_file.name)
+                    donation_request.image = django_file
+                    donation_request.save()
+
                 response_serializer = DonationRequestIdSerializer(donation_request)
                 return Response(response_serializer.data, status=status.HTTP_201_CREATED)
             else:
