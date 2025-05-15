@@ -56,11 +56,14 @@
       const message = document.getElementById('textInput').value;
       if (!message || !currentRoomId) return;
 
-      socket.emit('chat message:text', {
+      const payload = {
         roomId: currentRoomId,
         userId: currentUserId,
         message
-      });
+      };
+
+      console.log('[emit text]', payload)
+      socket.emit('text', payload);
 
       document.getElementById('textInput').value = '';
     }
@@ -73,16 +76,22 @@
       const reader = new FileReader();
       reader.onload = function (e) {
         const base64Data = e.target.result.split(',')[1]; // data:image/... 제거
-        socket.emit('chat message:image', {
+        
+        const payload = {
           roomId: currentRoomId,
           userId: currentUserId,
           imageBase64: base64Data
-        });
+        };
+        
+        console.log('[emit image]', payload);
+        socket.emit('image', payload);
       };
       reader.readAsDataURL(file);
     }
 
     socket.on('chat message', (data) => {
+      console.log(data);
+      
       const { userId, message, messageType, timestamp, imageUrl } = data;
       let content = `<strong> 사용자 ${userId}</strong>: `;
 

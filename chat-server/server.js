@@ -86,7 +86,7 @@ const io = new Server(httpServer, {
 io.use(authenticate);
 
 // 메시지 전송
-function sendChatMessage({ roomId, userId, message, messageType, imageUrl = null }) {
+function sendChatMessage({ socket, roomId, userId, message, messageType, imageUrl = null }) {
   const timestamp = new Date();
 
   pubClient.publish(`room_${roomId}_channel`, JSON.stringify({
@@ -96,7 +96,7 @@ function sendChatMessage({ roomId, userId, message, messageType, imageUrl = null
     messageType
   }));
 
-  io.to(roomId).emit('chat message', {
+  socket.broadcast.to(roomId).emit('chat message', {
     userId,
     message,
     timestamp: timestamp.toISOString(),
@@ -163,10 +163,11 @@ Promise.all([
     //   });
     // });
 
-    socket.on('chat message:text', async ({ roomId, message, userId }) => {
+    socket.on('text', async ({ roomId, message, userId }) => {
       console.log(`텍스트 메시지 수신: ${message} | 방: ${roomId} | 사용자: ${userId}`);
 
       const timestamp = sendChatMessage({
+        socket,
         roomId,
         userId,
         message,
@@ -188,7 +189,7 @@ Promise.all([
       });
     });
 
-    socket.on('chat message:image', async ({ roomId, imageBase64, userId }) => {
+    socket.on('image', async ({ roomId, imageBase64, userId }) => {
       try {
         if (!imageBase64) {
           throw new Error('이미지 데이터가 없습니다.');
@@ -203,6 +204,7 @@ Promise.all([
         const imageUrl = `http://${process.env.HOST_PUBLIC_MINIO}:${process.env.MINIO_PORT}/${bucketName}/${filename}`;
 
         const timestamp = sendChatMessage({
+          socket,
           roomId,
           userId,
           message: '[이미지]',
