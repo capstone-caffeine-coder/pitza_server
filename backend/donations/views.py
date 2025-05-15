@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.db.models import Case, When, IntegerField # Import necessary functions
 from datetime import timedelta
 
@@ -16,6 +17,7 @@ from .models import DonationRequest
 
 class DonationRequestViewSet(viewsets.ViewSet):
     swagger_schema = SwaggerAutoSchema
+    parser_classes = [MultiPartParser, FormParser]
     
     @swagger_auto_schema(method='get',
                          responses={200: MessageSerializer})
@@ -38,8 +40,8 @@ class DonationRequestViewSet(viewsets.ViewSet):
             else:
                 print(donation_request_serializer.errors)
                 return Response(donation_request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        # else:
-        #     print(serializer.errors)
+        else:
+            print(serializer.errors)
         #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
     @swagger_auto_schema(responses={200: DonationRequestSerializer})
