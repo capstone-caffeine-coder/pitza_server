@@ -21,6 +21,7 @@ class CreateDonationRequestSerializer(serializers.Serializer):
     location = serializers.CharField()
     donation_due_date = serializers.DateField()
     donator_registered_id = serializers.IntegerField()
+    image = serializers.ImageField(required=True)
 
 
 class RejectedMatchRequestSerializer(serializers.ModelSerializer):
