@@ -27,7 +27,7 @@ def profile_setup(request):
             user.profile_picture = profile_picture
             user.save()
 
-        return redirect('/home/')
+        return redirect('http://localhost:5173/')
 
     # GET: Load profile picture
     if user_id.startswith("카카오:"):
