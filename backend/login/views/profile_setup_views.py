@@ -38,4 +38,5 @@ def profile_setup(request):
 
     profile_picture = user.profile_picture if user else ""
 
-    return render(request, 'login/profile_setup.html', {'profile_picture': profile_picture})
+
+    return redirect('http://localhost:5173/')
