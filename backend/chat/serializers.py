@@ -2,6 +2,10 @@ from rest_framework import serializers
 from .models import ChatRoom, Message
 from django.contrib.auth.models import User
 
+class ChatRoomCreateRequestSerializer(serializers.Serializer):
+    post_id = serializers.CharField(max_length=100)
+    receiver_id = serializers.IntegerField()
+
 class ChatRoomSerializer(serializers.ModelSerializer):
     participants = serializers.SlugRelatedField(
         many=True,
@@ -53,13 +57,14 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         return obj.messages.filter(is_read=False).exclude(sender=user).count()
 
 class MessageSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField()
     sender = serializers.CharField(source='sender.username')
     message = serializers.CharField(source='content')
     sent_at = serializers.DateTimeField(source='timestamp')
 
     class Meta:
         model = Message
-        fields = ['sender', 'message', 'message_type', 'image_url', 'sent_at', 'is_read']
+        fields = ['id', 'sender', 'message', 'message_type', 'image_url', 'sent_at', 'is_read']
 
 class ChatRoomDetailSerializer(serializers.ModelSerializer):
     messages = MessageSerializer(many=True)
@@ -71,3 +76,15 @@ class ChatRoomDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChatRoom
         fields = ['room_id', 'messages', 'participants']
+
+class ReadMessageUpdateRequestSerializer(serializers.Serializer):
+    last_read_message_id = serializers.IntegerField()
+
+class ReportSerializer(serializers.Serializer):
+    # user_id = serializers.CharField()
+    message_id = serializers.ListField(
+        child=serializers.IntegerField(),  # 리스트 내부는 int
+        allow_empty=False
+    )
+    reason = serializers.CharField()
+    description = serializers.CharField()

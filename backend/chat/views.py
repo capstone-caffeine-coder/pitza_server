@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status, serializers
 from django.contrib.auth.models import User
 from .models import ChatRoom, ChatParticipant, Message, Report
-from .serializers import ChatRoomSerializer, ChatRoomListSerializer, ChatRoomDetailSerializer
+from .serializers import ChatRoomSerializer, ChatRoomListSerializer, ChatRoomDetailSerializer, ChatRoomCreateRequestSerializer, ReadMessageUpdateRequestSerializer, ReportSerializer
 
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
@@ -18,7 +18,7 @@ from drf_yasg.utils import swagger_auto_schema
 
 class ChatRoomCreateView(APIView):
 
-    @swagger_auto_schema(request_body=ChatRoomSerializer,responses={201: ChatRoomSerializer})
+    @swagger_auto_schema(request_body=ChatRoomCreateRequestSerializer,responses={201: ChatRoomSerializer})
     def post(self, request):
 
         post_id = request.data.get("post_id")
@@ -81,7 +81,7 @@ def chat_room_detail(request, room_id):
         return Response({'error': str(e)}, status=500)
 
 class ReadMessageUpdateView(APIView):
-    @swagger_auto_schema(request_body=ChatRoomSerializer, responses={200: 'Success'})
+    @swagger_auto_schema(request_body=ReadMessageUpdateRequestSerializer, responses={200: 'Success'})
     def post(self, request, room_id):
         try:
             user = request.user
@@ -112,7 +112,7 @@ class ReadMessageUpdateView(APIView):
             return Response({"error": str(e)}, status=500)
 
 @api_view(['POST'])
-@swagger_auto_schema(request_body=ChatRoomSerializer, responses={200: 'Success'})
+@swagger_auto_schema(responses={200: 'Success'})
 def leave_chat_room(request, room_id):
     try:
         user = request.user
@@ -133,14 +133,6 @@ def detect_auto_reason(content):
         return "자동 감지: 욕설 및 성희롱"
     return None
 
-class ReportSerializer(serializers.Serializer):
-    # user_id = serializers.CharField()
-    message_id = serializers.ListField(
-        child=serializers.IntegerField(),  # 리스트 내부는 int
-        allow_empty=False
-    )
-    reason = serializers.CharField()
-    description = serializers.CharField()
 
 @swagger_auto_schema(method='post', request_body=ReportSerializer, responses={201: 'Success'})
 @api_view(['POST'])
