@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
+from rest_framework import status, serializers
 from django.contrib.auth.models import User
 from .models import ChatRoom, ChatParticipant, Message, Report
 from .serializers import ChatRoomSerializer, ChatRoomListSerializer, ChatRoomDetailSerializer
@@ -17,15 +17,13 @@ PROFANITY_REGEX = re.compile(r"[시씨씪슈쓔쉬쉽쒸쓉](?:[0-9]*|[0-9]+ *)[
 from drf_yasg.utils import swagger_auto_schema
 
 class ChatRoomCreateView(APIView):
-    permission_classes = [AllowAny]
-    #permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(request_body=ChatRoomSerializer,responses={201: ChatRoomSerializer})
     def post(self, request):
+
         post_id = request.data.get("post_id")
         receiver_id = request.data.get("receiver_id")
-        sender = User.objects.get(id=1)
-        #sender = request.user
+        sender = request.user
         try:
             receiver = User.objects.get(id=receiver_id)
         except User.DoesNotExist:
@@ -54,38 +52,17 @@ class ChatRoomCreateView(APIView):
 
 @api_view(['GET'])
 @swagger_auto_schema(responses={200: ChatRoomListSerializer(many=True)})
-@permission_classes([AllowAny])
 def chatroom_list(request):
-    # user = request.user
-
-    # 테스트 편의상 sender_id 쿼리 파라미터로 사용자 ID를 받아 처리
-    user_id = request.query_params.get('user_id')
-    if not user_id:
-        return Response({"error": "required user_id"}, status=400)
-    
-    try:
-        user = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        return Response({"error": "Invalid user_id"}, status=400)
+    user = request.user
 
     chatrooms = ChatRoom.objects.filter(participants=user).order_by('-created_at')
     serializer = ChatRoomListSerializer(chatrooms, many=True, context={'request': request, 'user': user})
     return Response(serializer.data)
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
 @swagger_auto_schema(responses={200: ChatRoomDetailSerializer})
 def chat_room_detail(request, room_id):
-    # user = request.user
-    # 테스트 목적
-    user_id = request.query_params.get('user_id')
-    if not user_id:
-        return Response({"error": "required user_id"}, status=400)
-
-    try:
-        user = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        return Response({"error": "Invalid user_id"}, status=400)
+    user = request.user
 
     try:
         room = ChatRoom.objects.prefetch_related('messages__sender', 'participants').get(id=room_id)
@@ -104,18 +81,15 @@ def chat_room_detail(request, room_id):
         return Response({'error': str(e)}, status=500)
 
 class ReadMessageUpdateView(APIView):
-    permission_classes = [AllowAny]
-
     @swagger_auto_schema(request_body=ChatRoomSerializer, responses={200: 'Success'})
     def post(self, request, room_id):
         try:
-            user_id = request.data.get("user_id")  # 추후 request.user로 대체
+            user = request.user
             last_read_message_id = request.data.get("last_read_message_id")
 
             if not last_read_message_id:
                 return Response({"error": "last_read_message_id is required"}, status=400)
 
-            user = User.objects.get(id=user_id)
             chatroom = ChatRoom.objects.get(id=room_id)
             message = Message.objects.get(id=last_read_message_id, chatroom=chatroom)
 
@@ -123,13 +97,13 @@ class ReadMessageUpdateView(APIView):
             participant.last_read_message = message
             participant.save()
 
-            message.is_read = True
-            message.save()
+            Message.objects.filter(
+                chatroom=chatroom,
+                id__lte=last_read_message_id
+            ).exclude(sender=user).update(is_read=True)
 
             return Response({"success": True})
 
-        except User.DoesNotExist:
-            return Response({"error": "Invalid user ID"}, status=400)
         except ChatRoom.DoesNotExist:
             return Response({"error": "ChatRoom not found"}, status=404)
         except Message.DoesNotExist:
@@ -139,11 +113,9 @@ class ReadMessageUpdateView(APIView):
 
 @api_view(['POST'])
 @swagger_auto_schema(request_body=ChatRoomSerializer, responses={200: 'Success'})
-@permission_classes([AllowAny])
 def leave_chat_room(request, room_id):
     try:
-        user_id = request.data.get('user_id')
-        user = User.objects.get(id=user_id)
+        user = request.user
         room = ChatRoom.objects.get(id=room_id)
         
         if user in room.participants.all():
@@ -161,24 +133,34 @@ def detect_auto_reason(content):
         return "자동 감지: 욕설 및 성희롱"
     return None
 
+class ReportSerializer(serializers.Serializer):
+    # user_id = serializers.CharField()
+    message_id = serializers.ListField(
+        child=serializers.IntegerField(),  # 리스트 내부는 int
+        allow_empty=False
+    )
+    reason = serializers.CharField()
+    description = serializers.CharField()
+
+@swagger_auto_schema(method='post', request_body=ReportSerializer, responses={201: 'Success'})
 @api_view(['POST'])
-@permission_classes([AllowAny])
 def report_message(request, room_id):
     try:
         chatroom = get_object_or_404(ChatRoom, id=room_id)
 
-        user_id = request.data.get('user_id')
+        # user_id = request.data.get('user_id')
         message_ids = request.data.get('message_id')
         reason = request.data.get('reason')
         description = request.data.get('description')
 
-        if not user_id or not message_ids or not reason or not description:
+        if not message_ids or not reason or not description:
             return Response({
-                "error": "required user_id, message_id, reason, description"
+                "error": "required message_id, reason, description"
             }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            reporter = User.objects.get(id=user_id)
+            # reporter = User.objects.get(id=user_id)
+            reporter = request.user
         except User.DoesNotExist:
             return Response({"error": "Invalid user ID"}, status=400)
 
