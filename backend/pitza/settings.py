@@ -9,8 +9,12 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+from dotenv import load_dotenv
 from pathlib import Path
 import os
+
+load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -24,8 +28,10 @@ SECRET_KEY = 'django-insecure-v0yld&tv!_b!yxr8_h-#6p&$b$0*&ep3+7)u9bt_)qeb5_3km#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1']
 
+# session logs out when user closes the browser
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 # Application definition
 
@@ -36,16 +42,25 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'donations.apps.DonationsConfig',
+    'minio_storage',  
+    'drf_yasg',
+    'corsheaders',
+    'chat',
+    'rest_framework',
+    'login',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
 ]
 
 ROOT_URLCONF = 'pitza.urls'
@@ -83,6 +98,9 @@ DATABASES = {
             # Example: Ensures UTF8MB4 is used for the connection
             'charset': 'utf8mb4', 
         },
+    },
+    'test': {
+        'NAME': f"test_{os.environ.get('DB_NAME')}",
     }
 }
 
@@ -116,13 +134,53 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+
+# MinIO Storage Settings
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+STORAGES = {
+    "default": {
+        "BACKEND": "minio_storage.storage.MinioMediaStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+    "minio_storage": { 
+        "BACKEND": "minio_storage.storage.MinioStorage",
+        "ENDPOINT": os.environ.get('MINIO_ENDPOINT'),
+        "ACCESS_KEY": os.environ.get('MINIO_ACCESS_KEY'),
+        "SECRET_KEY": os.environ.get('MINIO_SECRET_KEY'),
+        "USE_HTTPS": os.environ.get('MINIO_USE_HTTPS'),
+        "BUCKET_NAME": "pitza-media",
+        "AUTO_CREATE_BUCKET": True,
+    },
+}
+
+MINIO_STORAGE_BACKENDS = {
+    "default": {
+        "bucket_name": "pitza-media",
+    },
+}
+
+MINIO_STORAGE_ENDPOINT = os.environ.get('MINIO_ENDPOINT', 'minio:9000')
+MINIO_STORAGE_ACCESS_KEY = os.environ.get('MINIO_STORAGE_ACCESS_KEY')
+MINIO_STORAGE_SECRET_KEY = os.environ.get('MINIO_STORAGE_SECRET_KEY')
+MINIO_STORAGE_AUTO_CREATE_MEDIA_BUCKET = True
+MINIO_STORAGE_AUTO_CREATE_STATIC_BUCKET = True
+MINIO_STORAGE_USE_HTTPS = False
+MINIO_STORAGE_MEDIA_BUCKET_NAME = 'pitza-media'
+MINIO_STORAGE_STATIC_BUCKET_NAME = 'pitza-static'
+MINIO_STORAGE_MEDIA_USE_PRESIGNED = True
+MINIO_STORAGE_STATIC_USE_PRESIGNED = True
+
+# Add CORS settings for MinIO
+CORS_ALLOW_ALL_ORIGINS = True  # Only for development
+CORS_ALLOW_CREDENTIALS = True
