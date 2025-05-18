@@ -7,13 +7,29 @@ const { createAdapter } = require('@socket.io/redis-adapter');
 const { createClient } = require('redis');
 const mysql = require('mysql2');
 const Minio = require('minio');
-const { log } = require('console');
+const axios = require('axios');
 
-// 인증 미들웨어
-function authenticate(socket, next) {
-  socket.user = { id: 1, name: "TestUser" }; // TODO: 실제 인증 구현 필요
-  next();
+async function authenticate(socket, next) {
+  const sessionKey = socket.handshake.auth?.session_key;
+  console.log('세션 키 수신: ', sessionKey);
+
+  if (!sessionKey) return next(new Error("No session key provided"));
+
+  try {
+    const response = await axios.post('http://web:8000/get_user_by_session/', {
+      session_key: sessionKey
+    });
+
+    // socket.user 대신 socket.data.user 에 저장
+    socket.data.user = response.data;
+    console.log('인증 성공 - 사용자: ', socket.data.user.id);
+    next();
+  } catch (err) {
+    console.error("Authentication error:", err.message || err);
+    next(new Error("Authentication failed"));
+  }
 }
+
 
 // MySQL 연결
 const db = mysql.createConnection({
@@ -86,8 +102,9 @@ const io = new Server(httpServer, {
 io.use(authenticate);
 
 // 메시지 전송
-function sendChatMessage({ socket, roomId, userId, message, messageType, imageUrl = null }) {
+function sendChatMessage({ socket, roomId, message, messageType, imageUrl = null }) {
   const timestamp = new Date();
+  const userId = socket.data.user.id;
 
   pubClient.publish(`room_${roomId}_channel`, JSON.stringify({
     message,
@@ -118,6 +135,13 @@ Promise.all([
   console.log('Redis 및 MinIO 준비 완료');
 
   io.on('connection', (socket) => {
+    if (!socket.data.user || !socket.data.user.id) {
+      console.error('인증 안된 연결입니다. 연결 종료:', socket.id);
+      socket.disconnect(true);
+      return;
+    }
+    console.log(`인증된 연결: ${socket.id}, 사용자 ID: ${socket.data.user.id}`);
+
     console.log(`새로운 연결: ${socket.id}`);
 
     socket.on('join', (roomId) => {
@@ -125,51 +149,15 @@ Promise.all([
       console.log(`${socket.id} -> 방 참가: ${roomId}`);
     });
 
-    // 메시지 읽음 처리
-    // socket.on('read_message', ({ roomId, messageId, userId }) => {
-    //   console.log(`메시지 읽음 처리 수신: 메시지 ID = ${messageId} | 방 = ${roomId} | 사용자 = ${userId}`);
 
-    //   // MySQL에서 읽음 처리 로직
-    //   const query = `
-    //     UPDATE chat_message
-    //     SET is_read = true
-    //     WHERE id = ? AND chatroom_id = ? AND sender_id != ?
-    //   `;
-    //   const values = [messageId, roomId, userId]; // 자기 자신이 보낸 메시지는 제외
-
-    //   db.query(query, values, (err, result) => {
-    //     if (err) {
-    //       console.error('MySQL 읽음 처리 오류:', err.message);
-    //       socket.emit('error', { message: '읽음 처리 오류' });
-    //     } else {
-    //       console.log('MySQL에서 메시지 읽음 처리 성공');
-    //       // ChatParticipant 테이블의 마지막 읽은 메시지 갱신
-    //       const updateLastReadQuery = `
-    //         UPDATE chat_participant
-    //         SET last_read_message_id = ?
-    //         WHERE chatroom_id = ? AND user_id = ?
-    //       `;
-    //       db.query(updateLastReadQuery, [messageId, roomId, userId], (err) => {
-    //         if (err) {
-    //           console.error('MySQL에서 ChatParticipant 읽음 처리 오류:', err.message);
-    //           socket.emit('error', { message: 'ChatParticipant 읽음 처리 오류' });
-    //         } else {
-    //           console.log('ChatParticipant의 마지막 읽은 메시지 갱신 성공');
-    //           // 메시지를 읽었음을 클라이언트에 알림
-    //           io.to(roomId).emit('message_read', { messageId, userId });
-    //         }
-    //       });
-    //     }
-    //   });
-    // });
-
-    socket.on('text', async ({ roomId, message, userId }) => {
-      console.log(`텍스트 메시지 수신: ${message} | 방: ${roomId} | 사용자: ${userId}`);
+    socket.on('text', async ({ roomId, message}) => {
+      const userId = socket.data.user.id;
+      console.log(`텍스트 메시지 수신: ${message} | 방: ${roomId} | 사용자: ${userId}`)
 
       const timestamp = sendChatMessage({
         socket,
-        roomId,
         userId,
+        roomId,
         message,
         messageType: 'text'
       });
@@ -189,7 +177,8 @@ Promise.all([
       });
     });
 
-    socket.on('image', async ({ roomId, imageBase64, userId }) => {
+    socket.on('image', async ({ roomId, imageBase64 }) => {
+      const userId = socket.data.user.id;
       try {
         if (!imageBase64) {
           throw new Error('이미지 데이터가 없습니다.');
@@ -205,8 +194,8 @@ Promise.all([
 
         const timestamp = sendChatMessage({
           socket,
-          roomId,
           userId,
+          roomId,
           message: '[이미지]',
           messageType: 'image',
           imageUrl
