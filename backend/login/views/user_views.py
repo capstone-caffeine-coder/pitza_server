@@ -9,7 +9,7 @@ from login.models import User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'kakao_id', 'nickname','birthdate', 'sex', 'blood_type', 'profile_picture']
+        fields = ['id', 'email', 'kakao_id', 'nickname','birthdate', 'sex', 'blood_type', 'profile_picture', 'age']
         
         
 @api_view(['GET'])

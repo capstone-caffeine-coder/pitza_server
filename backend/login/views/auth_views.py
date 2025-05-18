@@ -3,8 +3,8 @@ from urllib.parse import urlencode
 import requests
 import os
 
-
 from login.models import User
+from django.contrib.auth import login
 
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
@@ -55,10 +55,12 @@ def google_callback(request):
     user, created = User.objects.get_or_create(email=email, defaults={"profile_picture": picture})
     request.session['user'] = email
 
+    login(request, user)
+
     if user.nickname:
-        return redirect('/home/')
+        return redirect('http://localhost:5173/')
     else:
-        return redirect('/profile/setup/')
+        return redirect('http://localhost:5173/profile/setup/')
 
 
 
@@ -97,7 +99,9 @@ def kakao_callback(request):
     )
     request.session['user'] = f"카카오:{kakao_id}"
 
+    login(request, user)
+
     if user.nickname:
-        return redirect('/home/')
+        return redirect('http://localhost:5173/')
     else:
-        return redirect('/profile/setup/')
+        return redirect('http://localhost:5173/profile/setup/')

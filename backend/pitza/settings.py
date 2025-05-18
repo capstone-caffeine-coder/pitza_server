@@ -30,6 +30,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1', 'web']
 
+# session logs out when user closes the browser
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 # Application definition
 
@@ -58,6 +60,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
 ]
 
 ROOT_URLCONF = 'pitza.urls'
@@ -138,13 +141,34 @@ STATIC_URL = '/static/'
 
 # MinIO Storage Settings
 
-MINIO_STORAGE_BACKENDS = {
+# Default primary key field type
+# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+STORAGES = {
     "default": {
-        "bucket_name": "pitza",
+        "BACKEND": "minio_storage.storage.MinioMediaStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+    "minio_storage": { 
+        "BACKEND": "minio_storage.storage.MinioStorage",
+        "ENDPOINT": os.environ.get('MINIO_ENDPOINT'),
+        "ACCESS_KEY": os.environ.get('MINIO_ACCESS_KEY'),
+        "SECRET_KEY": os.environ.get('MINIO_SECRET_KEY'),
+        "USE_HTTPS": os.environ.get('MINIO_USE_HTTPS'),
+        "BUCKET_NAME": "pitza-media",
+        "AUTO_CREATE_BUCKET": True,
     },
 }
 
-DEFAULT_FILE_STORAGE = "minio_storage.storage.MinioMediaStorage"
+MINIO_STORAGE_BACKENDS = {
+    "default": {
+        "bucket_name": "pitza-media",
+    },
+}
 
 MINIO_STORAGE_ENDPOINT = os.environ.get('MINIO_ENDPOINT', 'minio:9000')
 MINIO_STORAGE_ACCESS_KEY = os.environ.get('MINIO_STORAGE_ACCESS_KEY')
@@ -160,9 +184,3 @@ MINIO_STORAGE_STATIC_USE_PRESIGNED = True
 # Add CORS settings for MinIO
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development
 CORS_ALLOW_CREDENTIALS = True
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
