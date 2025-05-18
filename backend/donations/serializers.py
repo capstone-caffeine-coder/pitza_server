@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
+from login.models import User
 from .models import DonationRequest, RejectedMatchRequest, SelectedMatchRequest
+
 
 class DonationRequestSerializer(serializers.ModelSerializer):
     requester = serializers.PrimaryKeyRelatedField(
@@ -58,7 +59,6 @@ class DonatorRegisteredIdSerializer(serializers.Serializer):
 class MatchRequestSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     blood_type = serializers.CharField()
-    name = serializers.CharField()
     age = serializers.IntegerField()
     sex = serializers.CharField()
     location = serializers.CharField()
