@@ -5,7 +5,7 @@ from minio_storage.storage import MinioStorage
 from minio import Minio
 
 import os
-
+from django.conf import settings
 
 minio_client = Minio(
     "minio:9000",
@@ -32,7 +32,7 @@ class DonationRequest(models.Model):
         ('O-', 'O Negative'),
     ]
     
-    requester = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='donation_requests')
+    requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='donation_requests')
     name = models.CharField(max_length=255)
     age = models.IntegerField(validators=[MinValueValidator(16), MaxValueValidator(70)])
     sex = models.CharField(max_length=1, choices=SEX_CHOICES)
@@ -52,14 +52,14 @@ class DonationRequest(models.Model):
 
 
 class RejectedMatchRequest(models.Model):
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='rejected_matches')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='rejected_matches')
     donation_request = models.ForeignKey(DonationRequest, on_delete=models.CASCADE, related_name='rejected_matches')
     
     class Meta:
         unique_together = ('user', 'donation_request')
 
 class SelectedMatchRequest(models.Model):
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='selected_matches')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='selected_matches')
     donation_request = models.ForeignKey(DonationRequest, on_delete=models.CASCADE, related_name='selected_matches')
     selected_at = models.DateTimeField(auto_now_add=True)
     

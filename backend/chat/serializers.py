@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import ChatRoom, Message
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 class ChatRoomCreateRequestSerializer(serializers.Serializer):
     post_id = serializers.CharField(max_length=100)
@@ -46,7 +47,7 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         other = obj.participants.exclude(id=user.id).first()  # 현재 사용자를 제외한 상대방
         return {
             "id": other.id,
-            "name": other.username,  # 상대방의 ID와 닉네임
+            "name": other.nickname,  # 상대방의 ID와 닉네임
             "profileImage": getattr(other, 'profile_picture', '')  # 없으면 빈 문자열
         } if other else None
 
@@ -58,7 +59,7 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
 
 class MessageSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField()
-    sender = serializers.CharField(source='sender.username')
+    sender = serializers.CharField(source='sender.nickname')
     message = serializers.CharField(source='content')
     sent_at = serializers.DateTimeField(source='timestamp')
 
@@ -69,7 +70,7 @@ class MessageSerializer(serializers.ModelSerializer):
 class ChatRoomDetailSerializer(serializers.ModelSerializer):
     messages = MessageSerializer(many=True)
     participants = serializers.SlugRelatedField(
-        many=True, slug_field='username', read_only=True
+        many=True, slug_field='nickname', read_only=True
     )
     room_id = serializers.IntegerField(source='id')
 

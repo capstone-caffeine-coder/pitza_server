@@ -1,14 +1,15 @@
 from django.db import models
-from django.contrib.auth.models import User
+# from django.contrib.auth.models import User
+from django.conf import settings
 
 class ChatRoom(models.Model):
-    participants = models.ManyToManyField(User)
+    participants = models.ManyToManyField(settings.AUTH_USER_MODEL)
     post_id = models.CharField(max_length=100)  # 게시글 ID (string으로 저장)
     created_at = models.DateTimeField(auto_now_add=True)
 
 class Message(models.Model):
     chatroom = models.ForeignKey(ChatRoom, on_delete=models.CASCADE, related_name='messages')
-    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
@@ -17,7 +18,7 @@ class Message(models.Model):
     image_url = models.URLField(blank=True, null=True)  # 이미지 저장용 URL
 
 class ChatParticipant(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     chatroom = models.ForeignKey(ChatRoom, on_delete=models.CASCADE)
     last_read_message = models.ForeignKey(Message, null=True, blank=True, on_delete=models.SET_NULL)
 
@@ -27,7 +28,7 @@ class ChatParticipant(models.Model):
 class Report(models.Model):
     chatroom = models.ForeignKey(ChatRoom, on_delete=models.CASCADE)
     message = models.ForeignKey(Message, on_delete=models.CASCADE)
-    reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reports')
+    reporter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reports')
     reason = models.CharField(max_length=255)
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)

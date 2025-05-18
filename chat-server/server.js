@@ -76,6 +76,21 @@ function ensureMinioBucketReady() {
   });
 }
 
+function isUserInRoom(userId, roomId) {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT COUNT(*) as count
+      FROM chat_chatroom_participants
+      WHERE chatroom_id = ? AND user_id = ?
+    `;
+    db.query(query, [roomId, userId], (err, results) => {
+      if (err) return reject(err);
+      const count = results[0].count;
+      resolve(count > 0);  // true = 참여중
+    });
+  });
+}
+
 // 이미지 업로드 함수
 async function uploadImageToMinio(buffer, filename) {
   try {
@@ -142,11 +157,23 @@ Promise.all([
     }
     console.log(`인증된 연결: ${socket.id}, 사용자 ID: ${socket.data.user.id}`);
 
-    console.log(`새로운 연결: ${socket.id}`);
+    socket.on('join', async (roomId) => {
+      const userId = socket.data.user.id;
 
-    socket.on('join', (roomId) => {
-      socket.join(roomId);
-      console.log(`${socket.id} -> 방 참가: ${roomId}`);
+        try {
+          const allowed = await isUserInRoom(userId, roomId);
+          if (!allowed) {
+            console.warn(`접근 불가: 사용자 ${userId}가 방 ${roomId}에 참가하려 함`);
+            socket.emit('error', { message: '해당 채팅방에 접근 권한이 없습니다.' });
+            return;
+          }
+
+          socket.join(roomId);
+          console.log(`${socket.id} -> 방 참가: ${roomId}`);
+        } catch (err) {
+          console.error('방 참가 중 오류:', err.message);
+          socket.emit('error', { message: '서버 오류로 방 참가에 실패했습니다.' });
+        }
     });
 
 

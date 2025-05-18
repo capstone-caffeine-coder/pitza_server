@@ -184,3 +184,5 @@ MINIO_STORAGE_STATIC_USE_PRESIGNED = True
 # Add CORS settings for MinIO
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development
 CORS_ALLOW_CREDENTIALS = True
+
+AUTH_USER_MODEL= 'login.User'

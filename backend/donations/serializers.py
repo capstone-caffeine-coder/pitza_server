@@ -1,6 +1,10 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
+# from django.contrib.auth.models import User
 from .models import DonationRequest, RejectedMatchRequest, SelectedMatchRequest
+
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class DonationRequestSerializer(serializers.ModelSerializer):
     requester = serializers.PrimaryKeyRelatedField(
