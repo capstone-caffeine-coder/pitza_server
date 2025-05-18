@@ -40,7 +40,7 @@ urlpatterns = [
     path('oauth/google/callback/', google_callback, name='google_callback'),
     path('login/kakao/', login_kakao, name='login_kakao'),
     path('oauth/kakao/callback/', kakao_callback, name='kakao_callback'),
-    path('profile/setup/', views.profile_setup, name='profile_setup'),
+   #  path('profile/setup/', views.profile_setup, name='profile_setup'),
 
    #  # User info view
    path('user/<int:pk>/', user_detail, name='user_detail'),
