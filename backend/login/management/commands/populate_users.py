@@ -2,6 +2,7 @@ import random
 from faker import Faker
 from django.core.management.base import BaseCommand
 from login.models import User #
+from django.contrib.auth import get_user_model
 
 fake = Faker('ko_KR')
 
