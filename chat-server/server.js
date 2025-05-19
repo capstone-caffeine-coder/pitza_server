@@ -10,26 +10,30 @@ const Minio = require('minio');
 const axios = require('axios');
 
 async function authenticate(socket, next) {
-  const sessionKey = socket.handshake.auth?.session_key;
-  console.log('세션 키 수신: ', sessionKey);
+  const cookieHeader = socket.handshake.headers.cookie;
+  console.log('Received cookies:', cookieHeader);
+    try {
+      if (!cookieHeader) {
+        console.log('쿠키가 없습니다. 인증 실패');
+        return next(new Error('Authentication failed: No cookies'));
+      }
 
-  if (!sessionKey) return next(new Error("No session key provided"));
+      const response = await axios.get('http://web:8000/get_user_by_session/', {
+        headers: {
+          cookie: cookieHeader
+        },
+        withCredentials: true 
+      });
 
-  try {
-    const response = await axios.post('http://web:8000/get_user_by_session/', {
-      session_key: sessionKey
-    });
+      socket.data.user = response.data;
+      console.log('인증 성공 - 사용자 ID:', socket.data.user.id);
+      next();
 
-    // socket.user 대신 socket.data.user 에 저장
-    socket.data.user = response.data;
-    console.log('인증 성공 - 사용자: ', socket.data.user.id);
-    next();
-  } catch (err) {
-    console.error("Authentication error:", err.message || err);
-    next(new Error("Authentication failed"));
-  }
+    } catch (err) {
+      console.error('인증 오류:', err.message || err);
+      next(new Error('Authentication failed'));
+    }
 }
-
 
 // MySQL 연결
 const db = mysql.createConnection({
@@ -108,8 +112,13 @@ app.use(express.static('public'));
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:8000", // 테스트목적
+      "http://127.0.0.1:5500"
+    ],
+    methods: ["GET", "POST"],
+    credentials: true
   },
   maxHttpBufferSize: 20 * 1024 * 1024
 });

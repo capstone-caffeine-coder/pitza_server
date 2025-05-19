@@ -215,3 +215,9 @@ def report_message(request, room_id):
         import traceback
         traceback.print_exc()
         return Response({'error': str(e)}, status=500)
+
+from django.views.generic import TemplateView
+
+# 테스트 목적
+class ChatTestView(TemplateView):
+    template_name = "chat-test.html"
