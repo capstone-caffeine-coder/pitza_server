@@ -91,7 +91,7 @@ class DonationRequestViewSet(viewsets.ViewSet):
  
 
             # get the list of rejected donation request IDs for the current user
-            rejected_ids = RejectedMatchRequest.objects.filter(user=request.user).values_list('donation_request_id', flat=True)
+            rejected_ids = RejectedMatchRequest.objects.filter(user=serializer.validated_data['id']).values_list('donation_request_id', flat=True)
 
             queryset = DonationRequest.objects.filter(
                 blood_type=requested_blood_type,
@@ -122,7 +122,6 @@ class DonationRequestViewSet(viewsets.ViewSet):
                 '-matches_location',
                 '-matches_sex',       
                 '-matches_age_range',  
-                '-matches_date_range', 
             )
             
             if queryset.exists():
