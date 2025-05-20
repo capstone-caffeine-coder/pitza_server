@@ -13,6 +13,9 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+import time
+from django.shortcuts import redirect
+
 User = get_user_model()
 
 # Schema for the POST request body
@@ -95,10 +98,16 @@ redirect_response_schema = openapi.Response(
 @api_view(['GET', 'POST'])
 @csrf_exempt
 def profile_setup(request):
+    print(f"DEBUG: profile_setup view received request. Method: {request.method}")
+    session_key = request.session.session_key
+    print(f"DEBUG: Session Key: {session_key}")
     user_id_from_session = request.session.get('user')
+    print(f"DEBUG: 'user' from session: {user_id_from_session}, Type: {type(user_id_from_session)}")
     user = None
 
     if user_id_from_session:
+        time.sleep(0.5)
+
         try:
             if isinstance(user_id_from_session, int):
                 user = User.objects.get(pk=user_id_from_session)
@@ -109,6 +118,8 @@ def profile_setup(request):
                 user = User.objects.get(email=user_id_from_session)
         except ObjectDoesNotExist:
             print(f"User ID/Identifier from session ({user_id_from_session}) not found in DB.")
+            if isinstance(user_id_from_session, int):
+                print(f"User ID {user_id_from_session} from session {session_key} not found in database.")
 
     if not user:
         print("Authentication failed: User not found via session identifier.")

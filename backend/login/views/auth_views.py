@@ -2,9 +2,10 @@ from django.shortcuts import render, redirect
 from urllib.parse import urlencode
 import requests
 import os
-
-from login.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.auth import login
+
+User = get_user_model()
 
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
@@ -57,6 +58,8 @@ def google_callback(request):
 
     login(request, user)
 
+    request.session.save()
+
     if user.nickname:
         return redirect('http://localhost:5173/')
     else:
@@ -100,6 +103,7 @@ def kakao_callback(request):
     request.session['user'] = f"카카오:{kakao_id}"
 
     login(request, user)
+    request.session.save()
 
     if user.nickname:
         return redirect('http://localhost:5173/')
