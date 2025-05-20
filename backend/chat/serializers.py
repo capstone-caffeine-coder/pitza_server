@@ -1,6 +1,11 @@
 from rest_framework import serializers
 from .models import ChatRoom, Message
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+class ChatRoomCreateRequestSerializer(serializers.Serializer):
+    post_id = serializers.CharField(max_length=100)
+    receiver_id = serializers.IntegerField()
 
 class ChatRoomSerializer(serializers.ModelSerializer):
     participants = serializers.SlugRelatedField(
@@ -38,10 +43,12 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
 
     def get_partner(self, obj):
         user = self.context['request'].user  # 현재 요청한 사용자
+        # user = self.context.get('user') # 테스트를 위함
         other = obj.participants.exclude(id=user.id).first()  # 현재 사용자를 제외한 상대방
         return {
             "id": other.id,
-            "name": other.username  # 상대방의 ID와 닉네임
+            "name": other.nickname,  # 상대방의 ID와 닉네임
+            "profileImage": getattr(other, 'profile_picture', '')  # 없으면 빈 문자열
         } if other else None
 
     def get_unread_count(self, obj):
@@ -51,21 +58,34 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         return obj.messages.filter(is_read=False).exclude(sender=user).count()
 
 class MessageSerializer(serializers.ModelSerializer):
-    sender = serializers.CharField(source='sender.username')
+    id = serializers.IntegerField()
+    sender = serializers.CharField(source='sender.nickname')
     message = serializers.CharField(source='content')
     sent_at = serializers.DateTimeField(source='timestamp')
 
     class Meta:
         model = Message
-        fields = ['sender', 'message', 'message_type', 'image_url', 'sent_at', 'is_read']
+        fields = ['id', 'sender', 'message', 'message_type', 'image_url', 'sent_at', 'is_read']
 
 class ChatRoomDetailSerializer(serializers.ModelSerializer):
     messages = MessageSerializer(many=True)
     participants = serializers.SlugRelatedField(
-        many=True, slug_field='username', read_only=True
+        many=True, slug_field='nickname', read_only=True
     )
     room_id = serializers.IntegerField(source='id')
 
     class Meta:
         model = ChatRoom
         fields = ['room_id', 'messages', 'participants']
+
+class ReadMessageUpdateRequestSerializer(serializers.Serializer):
+    last_read_message_id = serializers.IntegerField()
+
+class ReportSerializer(serializers.Serializer):
+    # user_id = serializers.CharField()
+    message_id = serializers.ListField(
+        child=serializers.IntegerField(),  # 리스트 내부는 int
+        allow_empty=False
+    )
+    reason = serializers.CharField()
+    description = serializers.CharField()
