@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-v0yld&tv!_b!yxr8_h-#6p&$b$0*&ep3+7)u9bt_)qeb5_3km#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1', 'web']
 
 # session logs out when user closes the browser
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
@@ -182,5 +182,22 @@ MINIO_STORAGE_MEDIA_USE_PRESIGNED = True
 MINIO_STORAGE_STATIC_USE_PRESIGNED = True
 
 # Add CORS settings for MinIO
-CORS_ALLOW_ALL_ORIGINS = True  # Only for development
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5500",
+    "http://localhost:3000",
+]
+
+# 세션/CSRF 쿠키 설정 (HTTP 사용 시 개발용)
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_HTTPONLY = True
+
+# 배포 후 HTTPS 환경
+# SESSION_COOKIE_SAMESITE = "None"
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
+
+AUTH_USER_MODEL= 'login.User'
