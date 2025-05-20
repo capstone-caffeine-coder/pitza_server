@@ -1,7 +1,8 @@
 from rest_framework import serializers
-from login.models import User
+from django.contrib.auth import get_user_model
 from .models import DonationRequest, RejectedMatchRequest, SelectedMatchRequest
 
+User = get_user_model()
 
 class DonationRequestSerializer(serializers.ModelSerializer):
     requester = serializers.PrimaryKeyRelatedField(
@@ -21,7 +22,7 @@ class CreateDonationRequestSerializer(serializers.Serializer):
     content = serializers.CharField()
     location = serializers.CharField()
     donation_due_date = serializers.DateField()
-    donator_registered_id = serializers.IntegerField()
+    donator_registered_id = serializers.CharField()
     image = serializers.ImageField(required=True)
 
 
