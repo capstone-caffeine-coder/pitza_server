@@ -55,11 +55,10 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'pitza.middleware.DisableCSRFMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
 ]
 
@@ -192,8 +191,8 @@ CORS_ALLOWED_ORIGINS = [
 # 세션/CSRF 쿠키 설정 (HTTP 사용 시 개발용)
 SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_HTTPONLY = False
+
 
 # 배포 후 HTTPS 환경
 # SESSION_COOKIE_SAMESITE = "None"
