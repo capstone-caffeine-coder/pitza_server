@@ -12,8 +12,19 @@ from rest_framework import status
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework import generics, permissions
+from login.models import User
+from login.serializers import UserProfileSerializer
 
 User = get_user_model()
+
+
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    def get_object(self):
+        return self.request.user
+
 
 # Schema for the POST request body
 request_body_schema_profile_setup = openapi.Schema(

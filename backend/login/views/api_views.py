@@ -4,14 +4,38 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+from login.serializers import UserProfileSerializer
+from login.models import User
+
 User = get_user_model()
+
+
+@api_view(['GET', 'POST', 'PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def profile_setup(request):
+    user = request.user
+
+    if request.method == 'GET':
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data)
+
+    elif request.method in ['POST', 'PUT', 'PATCH']:
+        serializer = UserProfileSerializer(user, data=request.data, partial=True)
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+    return Response({"detail": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 user_info_response_schema = openapi.Schema(
     type=openapi.TYPE_OBJECT,

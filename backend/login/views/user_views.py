@@ -1,4 +1,4 @@
-from django.shortcuts import get_object_or_404 # or your custom user model
+from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
 from rest_framework.response import Response

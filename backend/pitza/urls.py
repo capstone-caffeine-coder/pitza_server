@@ -11,6 +11,7 @@ from login.views.auth_views import login_view, login_google, google_callback, lo
 from login.views.user_views import user_detail  # Import your user detail view
 from login.views.api_views import get_user_by_session_api
 from donations.views import DonationRequestViewSet
+from login.views import UserProfileView
 
 
 schema_view = get_schema_view(
@@ -49,6 +50,9 @@ urlpatterns = [
 
    # API views
    path('get_user_by_session/', get_user_by_session_api, name='get_user_by_session_api'),
+
+   # userprofile
+   path('profile/', UserProfileView.as_view(), name='user-profile'),
 ]
 
 urlpatterns += router.urls

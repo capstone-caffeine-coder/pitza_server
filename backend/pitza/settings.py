@@ -138,6 +138,10 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# Media files (User-uploaded content)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media' # Or os.path.join(BASE_DIR, 'media')
+
 # MinIO Storage Settings
 
 # Default primary key field type
