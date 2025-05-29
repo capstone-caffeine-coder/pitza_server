@@ -25,9 +25,12 @@ class DonationRequestViewSet(viewsets.ViewSet):
                          responses={200: MessageSerializer})
     @action(detail=False, methods=['get'], url_path='test')
     def test(self, request):
+        
         # Save the file to MinIO storage bucket name: pitza-media
-        default_storage.save('test.png', ContentFile(open('test.png', 'rb').read()))
-        return Response({"message": "Hello, world!"})
+        default_storage.save('test.png', ContentFile(open('/backend/test_assets/test.png', 'rb').read()))
+        img = storages['default'].url('test.png')
+        
+        return Response({"message": "Test successful", "image_url": img}, status=status.HTTP_200_OK)
   
     @swagger_auto_schema(request_body=CreateDonationRequestSerializer,
     responses={201: DonationRequestIdSerializer})

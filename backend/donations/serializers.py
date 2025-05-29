@@ -8,6 +8,8 @@ class DonationRequestSerializer(serializers.ModelSerializer):
     requester = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
     ) 
+    
+    image = serializers.ImageField(use_url=True)
 
     class Meta:
         model = DonationRequest
