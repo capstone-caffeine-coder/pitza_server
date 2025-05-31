@@ -2,7 +2,7 @@ services:
   db:
     image: mysql:8.0
     ports:
-      - "3307:3306"
+      - "3306:3306"
     volumes:
       - ./data/db:/var/lib/mysql
     env_file:
@@ -50,6 +50,7 @@ services:
         echo ls &&
         python manage.py makemigrations &&
         python manage.py migrate &&
+        python manage.py fetch_blood_centers &&
         python manage.py runserver 0.0.0.0:8000
         "
       depends_on:
