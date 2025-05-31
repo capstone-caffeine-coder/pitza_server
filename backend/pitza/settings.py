@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'chat',
     'rest_framework',
     'login',
+    'services',
 ]
 
 MIDDLEWARE = [
@@ -204,3 +205,6 @@ SESSION_COOKIE_HTTPONLY = False
 # CSRF_COOKIE_SECURE = True
 
 AUTH_USER_MODEL= 'login.User'
+
+OPENAPI_SERVICE_KEY = os.getenv('OPENAPI_SERVICE_KEY')
+KAKAO_REST_API_KEY = os.getenv('KAKAO_REST_API_KEY')

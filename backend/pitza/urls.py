@@ -36,6 +36,7 @@ urlpatterns = [
    # project
    path('admin/', admin.site.urls),
    path('chat/', include('chat.urls')),
+   path("services/", include("services.urls")),
   
    # Auth views
    path('', login_view, name='login'),
