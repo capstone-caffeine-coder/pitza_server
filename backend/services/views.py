@@ -5,6 +5,9 @@ from drf_yasg import openapi
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .serializers import BloodCenterSerializer
+from rest_framework import status
+from django.core.mail import send_mail
+from rest_framework.views import APIView
 
 def haversine(lon1, lat1, lon2, lat2):
     # 두 지점의 위도/ 경도 받아 km 거리 계산
@@ -58,3 +61,40 @@ def blood_centers_all(request):
     centers = BloodCenter.objects.all()
     serializer = BloodCenterSerializer(centers, many=True)
     return Response({"count": len(centers), "centers": serializer.data})
+
+
+class SendMatchSuccessEmailView(APIView):
+
+    @swagger_auto_schema(
+        responses={
+            200: openapi.Response(description="이메일 전송 완료"),
+            400: openapi.Response(description="이메일 주소가 필요합니다."),
+        }
+    )
+    def post(self, request):
+        to_email = request.user.email
+        # to_email = 'pitza2025@gmail.com'
+        donor_name = getattr(request.user, 'nickname', '사용자')
+
+        if not to_email:
+            return Response({'error': '이메일 주소가 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        subject = "[핏자] 지정헌혈 매칭이 완료되었습니다!"
+        message = f"""
+        안녕하세요, 핏자입니다!
+
+        {donor_name} 님과의 지정헌혈 매칭이 완료되었습니다.
+        헌혈을 진행해 주세요.
+
+        감사합니다.
+        """
+
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=None,
+            recipient_list=[to_email],
+            fail_silently=False
+        )
+
+        return Response({'message': '이메일 전송 완료'}, status=status.HTTP_200_OK)
