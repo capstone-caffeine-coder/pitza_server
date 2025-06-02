@@ -44,6 +44,8 @@ urlpatterns = [
 
    #  # User info view
    path('user/<int:pk>/', user_detail, name='user_detail'),
+
+   path('', include('board.urls')),
 ]
 
 urlpatterns += router.urls
