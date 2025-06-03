@@ -49,6 +49,8 @@ urlpatterns = [
    # User info view
    path('user/<int:pk>/', user_detail, name='user_detail'),
 
+   path('', include('board.urls')),
+   
    # API views
    path('get_user_by_session/', get_user_by_session_api, name='get_user_by_session_api'),
 
