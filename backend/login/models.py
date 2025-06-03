@@ -2,15 +2,20 @@ from django.db import models
 from django.contrib.auth.models import (
     BaseUserManager, AbstractBaseUser
 )
-from datetime import date
+from datetime import date, timedelta
+import uuid
+from django.conf import settings
 
+
+try:
+    from .minio_utils import minio_client, MINIO_BUCKET_NAME
+except ImportError:
+    print("Warning: MinIO client not fully configured. Make sure you have 'minio_utils.py'.")
+    minio_client = None
+    MINIO_BUCKET_NAME = "default-profile-pictures"
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email=None, kakao_id=None, password=None, **extra_fields):
-        """
-        Creates and saves a User with the given email or kakao_id.
-        """
-        # Users must have either an email or a Kakao ID
         if not (email or kakao_id):
             raise ValueError('Users must have an email address or a Kakao ID')
 
@@ -53,7 +58,7 @@ class User(AbstractBaseUser):
     birthdate = models.DateField(null=True, blank=True)
     sex = models.CharField(max_length=10, blank=True)
     blood_type = models.CharField(max_length=3, blank=True)
-    profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
+    profile_picture_key = models.CharField(max_length=255, blank=True, null=True)
 
 
     is_active = models.BooleanField(default=True)
@@ -75,16 +80,26 @@ class User(AbstractBaseUser):
             return age
         return None
 
+    def get_profile_picture_url(self):
+        if self.profile_picture_key and minio_client:
+            try:
+                url = minio_client.presigned_get_object(
+                    MINIO_BUCKET_NAME,
+                    self.profile_picture_key,
+                    expires=timedelta(hours=1) # URL is valid for 1 hour
+                )
+                return url
+            except Exception as e:
+                print(f"Error generating MinIO presigned URL for {self.profile_picture_key}: {e}")
+                return None
+        return None
 
     def has_perm(self, perm, obj=None):
-        "Does the user have a specific permission?"
         return self.is_superuser
 
     def has_module_perms(self, app_label):
-        "Does the user have permissions to view the app `app_label`?"
         return self.is_staff
 
 
     def __str__(self):
-        """String representation of the User."""
         return self.nickname or self.email or f"Kakao:{self.kakao_id}"
