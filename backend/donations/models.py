@@ -1,19 +1,10 @@
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
+from django.contrib.auth import get_user_model
 
-from minio_storage.storage import MinioStorage
-from minio import Minio
+from django.conf import settings
 
-import os
-
-
-minio_client = Minio(
-    "minio:9000",
-    access_key=os.getenv("MINIO_ACCESS_KEY"),
-    secret_key=os.getenv("MINIO_SECRET_KEY"),
-    secure=os.getenv("MINIO_USE_HTTPS") # Use secure=True for HTTPS
-)
-
+User = get_user_model()
 
 class DonationRequest(models.Model):
     SEX_CHOICES = [
@@ -32,7 +23,7 @@ class DonationRequest(models.Model):
         ('O-', 'O Negative'),
     ]
     
-    requester = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='donation_requests')
+    requester = models.ForeignKey(User, on_delete=models.CASCADE, related_name='donation_requests')
     name = models.CharField(max_length=255)
     age = models.IntegerField(validators=[MinValueValidator(16), MaxValueValidator(70)])
     sex = models.CharField(max_length=1, choices=SEX_CHOICES)
@@ -46,20 +37,33 @@ class DonationRequest(models.Model):
         )
     location = models.CharField(max_length=255)
     donation_due_date = models.DateField()
-    donator_registered_id = models.IntegerField(null=True, blank=True)
+    donator_registered_id = models.CharField(
+        max_length=11,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{6}-\d{4}$',
+                message='ID must be in the format XXXXXX-XXXX (6 digits, hyphen, 4 digits).',
+                code='invalid_donator_id'
+            )
+        ],
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    def get_public_image_url(self):
+        return f"{settings.MINIO_PUBLIC_URL_BASE}/{settings.MINIO_STORAGE_BUCKET_NAME}/{self.image.name}"
+
     
 
 
 class RejectedMatchRequest(models.Model):
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='rejected_matches')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='rejected_matches')
     donation_request = models.ForeignKey(DonationRequest, on_delete=models.CASCADE, related_name='rejected_matches')
     
     class Meta:
         unique_together = ('user', 'donation_request')
 
 class SelectedMatchRequest(models.Model):
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='selected_matches')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='selected_matches')
     donation_request = models.ForeignKey(DonationRequest, on_delete=models.CASCADE, related_name='selected_matches')
     selected_at = models.DateTimeField(auto_now_add=True)
     

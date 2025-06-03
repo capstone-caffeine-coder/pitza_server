@@ -7,12 +7,32 @@ const { createAdapter } = require('@socket.io/redis-adapter');
 const { createClient } = require('redis');
 const mysql = require('mysql2');
 const Minio = require('minio');
-const { log } = require('console');
+const axios = require('axios');
 
-// 인증 미들웨어
-function authenticate(socket, next) {
-  socket.user = { id: 1, name: "TestUser" }; // TODO: 실제 인증 구현 필요
-  next();
+async function authenticate(socket, next) {
+  const cookieHeader = socket.handshake.headers.cookie;
+  console.log('Received cookies:', cookieHeader);
+    try {
+      if (!cookieHeader) {
+        console.log('쿠키가 없습니다. 인증 실패');
+        return next(new Error('Authentication failed: No cookies'));
+      }
+
+      const response = await axios.get('http://web:8000/get_user_by_session/', {
+        headers: {
+          cookie: cookieHeader
+        },
+        withCredentials: true 
+      });
+
+      socket.data.user = response.data;
+      console.log('인증 성공 - 사용자 ID:', socket.data.user.id);
+      next();
+
+    } catch (err) {
+      console.error('인증 오류:', err.message || err);
+      next(new Error('Authentication failed'));
+    }
 }
 
 // MySQL 연결
@@ -60,6 +80,21 @@ function ensureMinioBucketReady() {
   });
 }
 
+function isUserInRoom(userId, roomId) {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT COUNT(*) as count
+      FROM chat_chatroom_participants
+      WHERE chatroom_id = ? AND user_id = ?
+    `;
+    db.query(query, [roomId, userId], (err, results) => {
+      if (err) return reject(err);
+      const count = results[0].count;
+      resolve(count > 0);  // true = 참여중
+    });
+  });
+}
+
 // 이미지 업로드 함수
 async function uploadImageToMinio(buffer, filename) {
   try {
@@ -77,8 +112,13 @@ app.use(express.static('public'));
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:8000", // 테스트목적
+      "http://127.0.0.1:5500"
+    ],
+    methods: ["GET", "POST"],
+    credentials: true
   },
   maxHttpBufferSize: 20 * 1024 * 1024
 });
@@ -86,8 +126,9 @@ const io = new Server(httpServer, {
 io.use(authenticate);
 
 // 메시지 전송
-function sendChatMessage({ roomId, userId, message, messageType, imageUrl = null }) {
+function sendChatMessage({ socket, roomId, message, messageType, imageUrl = null }) {
   const timestamp = new Date();
+  const userId = socket.data.user.id;
 
   pubClient.publish(`room_${roomId}_channel`, JSON.stringify({
     message,
@@ -96,7 +137,7 @@ function sendChatMessage({ roomId, userId, message, messageType, imageUrl = null
     messageType
   }));
 
-  io.to(roomId).emit('chat message', {
+  socket.broadcast.to(roomId).emit('chat message', {
     userId,
     message,
     timestamp: timestamp.toISOString(),
@@ -118,19 +159,41 @@ Promise.all([
   console.log('Redis 및 MinIO 준비 완료');
 
   io.on('connection', (socket) => {
-    console.log(`새로운 연결: ${socket.id}`);
+    if (!socket.data.user || !socket.data.user.id) {
+      console.error('인증 안된 연결입니다. 연결 종료:', socket.id);
+      socket.disconnect(true);
+      return;
+    }
+    console.log(`인증된 연결: ${socket.id}, 사용자 ID: ${socket.data.user.id}`);
 
-    socket.on('join', (roomId) => {
-      socket.join(roomId);
-      console.log(`${socket.id} -> 방 참가: ${roomId}`);
+    socket.on('join', async (roomId) => {
+      const userId = socket.data.user.id;
+
+        try {
+          const allowed = await isUserInRoom(userId, roomId);
+          if (!allowed) {
+            console.warn(`접근 불가: 사용자 ${userId}가 방 ${roomId}에 참가하려 함`);
+            socket.emit('error', { message: '해당 채팅방에 접근 권한이 없습니다.' });
+            return;
+          }
+
+          socket.join(roomId);
+          console.log(`${socket.id} -> 방 참가: ${roomId}`);
+        } catch (err) {
+          console.error('방 참가 중 오류:', err.message);
+          socket.emit('error', { message: '서버 오류로 방 참가에 실패했습니다.' });
+        }
     });
 
-    socket.on('chat message:text', async ({ roomId, message, userId }) => {
-      console.log(`텍스트 메시지 수신: ${message} | 방: ${roomId} | 사용자: ${userId}`);
+
+    socket.on('text', async ({ roomId, message}) => {
+      const userId = socket.data.user.id;
+      console.log(`텍스트 메시지 수신: ${message} | 방: ${roomId} | 사용자: ${userId}`)
 
       const timestamp = sendChatMessage({
-        roomId,
+        socket,
         userId,
+        roomId,
         message,
         messageType: 'text'
       });
@@ -150,7 +213,8 @@ Promise.all([
       });
     });
 
-    socket.on('chat message:image', async ({ roomId, imageBase64, userId }) => {
+    socket.on('image', async ({ roomId, imageBase64 }) => {
+      const userId = socket.data.user.id;
       try {
         if (!imageBase64) {
           throw new Error('이미지 데이터가 없습니다.');
@@ -165,8 +229,9 @@ Promise.all([
         const imageUrl = `http://${process.env.HOST_PUBLIC_MINIO}:${process.env.MINIO_PORT}/${bucketName}/${filename}`;
 
         const timestamp = sendChatMessage({
-          roomId,
+          socket,
           userId,
+          roomId,
           message: '[이미지]',
           messageType: 'image',
           imageUrl

@@ -2,9 +2,10 @@ from django.shortcuts import render, redirect
 from urllib.parse import urlencode
 import requests
 import os
-
-from login.models import User
 from django.contrib.auth import login
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
