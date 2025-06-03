@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from .models import DonationRequest, RejectedMatchRequest, SelectedMatchRequest
+
 
 User = get_user_model()
 
@@ -10,10 +12,18 @@ class DonationRequestSerializer(serializers.ModelSerializer):
     ) 
     
     image = serializers.ImageField(use_url=True)
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = DonationRequest
-        fields = ['id', 'requester', 'name', 'age', 'sex', 'blood_type', 'content', 'image', 'location', 'donation_due_date', 'donator_registered_id', 'created_at']
+        fields = ['id', 'requester', 'name', 'age', 'sex', 'blood_type', 'content', 'image', 'image_url','location', 'donation_due_date', 'donator_registered_id', 'created_at']
+        read_only_fields = ['image_url']
+        
+    def get_image_url(self, obj):
+        if obj.image and obj.image.name: # Check if an image file exists and has a name
+            
+            return f"{settings.MINIO_PUBLIC_URL_BASE}/{settings.MINIO_STORAGE_MEDIA_BUCKET_NAME}/{obj.image.name}"
+        return None
 
 class CreateDonationRequestSerializer(serializers.Serializer):
     requester = serializers.IntegerField()
