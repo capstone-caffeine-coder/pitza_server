@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'chat',
     'rest_framework',
     'login',
+    'services',
 ]
 
 MIDDLEWARE = [
@@ -207,3 +208,15 @@ SESSION_COOKIE_HTTPONLY = False
 # CSRF_COOKIE_SECURE = True
 
 AUTH_USER_MODEL= 'login.User'
+
+# 공공데이터, 카카오 REST_API
+OPENAPI_SERVICE_KEY = os.getenv('OPENAPI_SERVICE_KEY')
+KAKAO_REST_API_KEY = os.getenv('KAKAO_REST_API_KEY')
+
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS") == "True"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
