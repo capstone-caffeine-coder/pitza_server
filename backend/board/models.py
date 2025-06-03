@@ -15,7 +15,7 @@ class DonationPost(models.Model):  # 기부하기 탭
     introduction = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     def __str__(self):
-        return f"[기부] {self.donor.username}"
+        return f"[기부] {self.donor.email}"
 
 class RequestPost(models.Model):  # 요청하기 탭
     requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
