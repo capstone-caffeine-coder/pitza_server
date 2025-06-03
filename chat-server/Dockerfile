@@ -13,3 +13,6 @@ COPY . .
 
 # 애플리케이션 실행
 CMD ["node", "server.js"]
+
+COPY package*.json ./
+RUN npm install
