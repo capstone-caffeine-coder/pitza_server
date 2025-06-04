@@ -31,7 +31,7 @@ class Command(BaseCommand):
             sex = random.choice(['M', 'F'])
             blood_types = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']
             blood_type = random.choice(blood_types)
-            profile_picture = fake.image_url()
+            profile_picture_key = fake.image_url()
 
             try:
                 # Prioritize using your CustomUserManager's create_user method
@@ -44,7 +44,7 @@ class Command(BaseCommand):
                         birthdate=birthdate,
                         sex=sex,
                         blood_type=blood_type,
-                        profile_picture=profile_picture
+                        profile_picture_key=profile_picture_key,
                         # Set is_staff, is_superuser if needed, e.g.
                         # is_staff=fake.boolean(chance_of_getting_true=10)
                     )
@@ -56,7 +56,7 @@ class Command(BaseCommand):
                         birthdate=birthdate,
                         sex=sex,
                         blood_type=blood_type,
-                        profile_picture=profile_picture
+                        profile_picture_key=profile_picture_key
                     )
                     user.set_password('testpassword123')
                     user.save()
