@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-v0yld&tv!_b!yxr8_h-#6p&$b$0*&ep3+7)u9bt_)qeb5_3km#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1', 'web']
 
 # session logs out when user closes the browser
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
@@ -49,17 +49,18 @@ INSTALLED_APPS = [
     'chat',
     'rest_framework',
     'login',
+    'board',
+    'services',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'pitza.middleware.DisableCSRFMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
 ]
 
@@ -139,6 +140,10 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# Media files (User-uploaded content)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media' # Or os.path.join(BASE_DIR, 'media')
+
 # MinIO Storage Settings
 
 # Default primary key field type
@@ -170,7 +175,7 @@ MINIO_STORAGE_BACKENDS = {
     },
 }
 
-MINIO_STORAGE_ENDPOINT = os.environ.get('MINIO_ENDPOINT', 'minio:9000')
+MINIO_STORAGE_ENDPOINT = os.environ.get('MINIO_ENDPOINT', ':9000')
 MINIO_STORAGE_ACCESS_KEY = os.environ.get('MINIO_STORAGE_ACCESS_KEY')
 MINIO_STORAGE_SECRET_KEY = os.environ.get('MINIO_STORAGE_SECRET_KEY')
 MINIO_STORAGE_AUTO_CREATE_MEDIA_BUCKET = True
@@ -178,9 +183,41 @@ MINIO_STORAGE_AUTO_CREATE_STATIC_BUCKET = True
 MINIO_STORAGE_USE_HTTPS = False
 MINIO_STORAGE_MEDIA_BUCKET_NAME = 'pitza-media'
 MINIO_STORAGE_STATIC_BUCKET_NAME = 'pitza-static'
-MINIO_STORAGE_MEDIA_USE_PRESIGNED = True
-MINIO_STORAGE_STATIC_USE_PRESIGNED = True
+MINIO_STORAGE_MEDIA_USE_PRESIGNED = False
+MINIO_STORAGE_STATIC_USE_PRESIGNED = False
+
+MINIO_PUBLIC_URL_BASE = 'http://localhost:9000'
+MINIO_STORAGE_ENDPOINT_IS_PUBLIC = True
 
 # Add CORS settings for MinIO
-CORS_ALLOW_ALL_ORIGINS = True  # Only for development
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5500",
+    "http://localhost:3000",
+]
+
+# 세션/CSRF 쿠키 설정 (HTTP 사용 시 개발용)
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = False
+SESSION_COOKIE_HTTPONLY = False
+
+
+# 배포 후 HTTPS 환경
+# SESSION_COOKIE_SAMESITE = "None"
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
+
+AUTH_USER_MODEL= 'login.User'
+
+# 공공데이터, 카카오 REST_API
+OPENAPI_SERVICE_KEY = os.getenv('OPENAPI_SERVICE_KEY')
+KAKAO_REST_API_KEY = os.getenv('KAKAO_REST_API_KEY')
+
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS") == "True"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")

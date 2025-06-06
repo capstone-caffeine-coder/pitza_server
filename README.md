@@ -77,3 +77,19 @@ To view logs:
 ```bash
 docker compose logs -f
 ```
+
+<br>
+
+# Django command로 유저 데이터 생성하는 방법
+
+1. django 컨테이너 접속 
+`docker exec -it NAME bash`
+
+2. `python manage.py help'로 해당 커맨드가 등록되어 있는지 확인
+e.g.
+
+`python manage.py help | grep populate_users' 에서 나오면 커맨드 실행 가능, 없으면 실행 못함
+
+3. `python manage.py 해당 커맨드 이름`
+
+4. DB 테이블에 들어있는지 확인

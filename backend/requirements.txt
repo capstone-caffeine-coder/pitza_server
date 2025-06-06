@@ -11,3 +11,4 @@ django-minio-storage==0.5.8
 django-cors-headers==4.3.1
 channels>=4.0
 requests
+faker
