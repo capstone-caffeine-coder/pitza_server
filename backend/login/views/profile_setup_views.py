@@ -1,17 +1,14 @@
-# login/views/profile_setup_views.py
-
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from datetime import date, datetime
 import json
-import uuid
-import requests
-from io import BytesIO
 
-from rest_framework import generics, permissions, parsers
+from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.decorators import api_view
+from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
+from rest_framework.views import APIView
+from rest_framework.request import Request 
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -21,65 +18,9 @@ from login.serializers import UserProfileSerializer
 from django.shortcuts import redirect
 
 
-
 User = get_user_model()
 
-
-class UserProfileSetupView(generics.RetrieveUpdateAPIView):
-    serializer_class = UserProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
-
-    def get_object(self):
-        return self.request.user
-    
-    def post(self, request, *args, **kwargs):
-        return self.partial_update(request, *args, **kwargs)
-
-
-
-request_body_schema_profile_setup = openapi.Schema(
-    type=openapi.TYPE_OBJECT,
-    properties={
-        'nickname': openapi.Schema(type=openapi.TYPE_STRING, description="User's chosen nickname."),
-        'birthdate': openapi.Schema(type=openapi.TYPE_STRING, format='date', description="User's birth date (YYYY-MM-DD)."),
-        'sex': openapi.Schema(type=openapi.TYPE_STRING, description="User's sex."),
-        'blood_type': openapi.Schema(type=openapi.TYPE_STRING, description="User's blood type."),
-        'profile_picture_input': openapi.Schema(type=openapi.TYPE_STRING, description="A URL to a remote profile picture to download and store, or an empty string to clear.", nullable=True),
-        'profile_picture_file': openapi.Schema(type=openapi.TYPE_FILE, description="An uploaded image file for the profile picture.", nullable=True),
-    },
-    required=['nickname', 'birthdate', 'sex', 'blood_type']
-)
-
-success_response_schema = openapi.Schema(
-    type=openapi.TYPE_OBJECT,
-    properties={
-        'id': openapi.Schema(type=openapi.TYPE_INTEGER, description="User ID"),
-        'email': openapi.Schema(type=openapi.TYPE_STRING, format='email', description="User email", nullable=True),
-        'kakao_id': openapi.Schema(type=openapi.TYPE_STRING, description="User Kakao ID", nullable=True),
-        'nickname': openapi.Schema(type=openapi.TYPE_STRING, description="Updated nickname"),
-        'profile_picture': openapi.Schema(type=openapi.TYPE_STRING, description="Updated profile picture URL", nullable=True),
-        'message': openapi.Schema(type=openapi.TYPE_STRING, description="Success message"),
-    },
-    example={
-        'id': 123,
-        'email': 'user@example.com',
-        'kakao_id': None,
-        'nickname': 'NewNickname',
-        'profile_picture': 'http://example.com/pic.jpg',
-        'message': 'Profile updated successfully',
-    }
-)
-
-error_response_schema = openapi.Schema(
-    type=openapi.TYPE_OBJECT,
-    properties={
-        'error': openapi.Schema(type=openapi.TYPE_STRING, description="Error message"),
-        'errors': openapi.Schema(type=openapi.TYPE_OBJECT, additionalProperties={'type': 'array', 'items': {'type': 'string'}}, description="Detailed validation errors", nullable=True)
-    },
-    example={'error': 'Missing required fields', 'errors': {'nickname': ['This field is required.']}}
-)
-
+# --- Schema Definitions (as in previous corrected version) ---
 redirect_response_schema = openapi.Response(
     description='Redirect to another page.',
     headers={
@@ -90,7 +31,49 @@ redirect_response_schema = openapi.Response(
     }
 )
 
+# --- UserProfileSetupView (with Debugging Prints) ---
+class UserProfileSetupView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser, FormParser] 
 
+    def get_object(self):
+        # --- DEBUGGING PRINT ---
+        print(f"DEBUG: In get_object() method.")
+        print(f"DEBUG: self.request.user: {self.request.user}")
+        print(f"DEBUG: Is self.request.user authenticated? {self.request.user.is_authenticated}")
+        
+        # Ensure that request.user is an authenticated User instance.
+        # permissions.IsAuthenticated should handle this, but this helps confirm.
+        if not self.request.user or not self.request.user.is_authenticated:
+            print("DEBUG: get_object() found unauthenticated or invalid user. Raising NotAuthenticated.")
+            raise permissions.NotAuthenticated("Authentication credentials were not provided or are invalid.")
+        
+        # If user is authenticated and valid, return it as the instance for the serializer.
+        return self.request.user
+    
+    def post(self, request: Request, *args, **kwargs):
+        # --- DEBUGGING PRINTS ---
+        print(f"DEBUG: In UserProfileSetupView POST method.")
+        print(f"DEBUG: Request user: {request.user}")
+        print(f"DEBUG: Is request.user authenticated? {request.user.is_authenticated}")
+        print(f"DEBUG: Request data received: {request.data}")
+        print(f"DEBUG: Type of request data: {type(request.data)}")
+
+        try:
+            # This calls the partial_update method of the base RetrieveUpdateAPIView.
+            # partial_update internally calls get_serializer, passing instance=self.get_object() and data=request.data.
+            response = self.partial_update(request, *args, **kwargs)
+            print(f"DEBUG: partial_update completed with status: {response.status_code}")
+            return response
+        except Exception as e:
+            # --- DEBUGGING PRINT ---
+            print(f"DEBUG: An unexpected error occurred during partial_update: {type(e).__name__}: {e}")
+            # Re-raise the exception to see the full traceback in your console
+            raise 
+
+
+# --- profile_setup_redirect (as in previous corrected version) ---
 @swagger_auto_schema(
     method='post',
     responses={
@@ -101,7 +84,7 @@ redirect_response_schema = openapi.Response(
     operation_description="Endpoint for loading the client-side profile setup page (redirect)."
 )
 @api_view(['POST'])
-def profile_setup_redirect(request):
+def profile_setup_redirect(request: Request):
     user_id_from_session = request.session.get('user')
     user = None
 
