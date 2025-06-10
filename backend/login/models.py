@@ -1,16 +1,14 @@
+# login/models.py
+
 from django.db import models
 from django.contrib.auth.models import (
     BaseUserManager, AbstractBaseUser
 )
-from datetime import date
+from datetime import date, timedelta
 
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email=None, kakao_id=None, password=None, **extra_fields):
-        """
-        Creates and saves a User with the given email or kakao_id.
-        """
-        # Users must have either an email or a Kakao ID
         if not (email or kakao_id):
             raise ValueError('Users must have an email address or a Kakao ID')
 
@@ -22,11 +20,12 @@ class CustomUserManager(BaseUserManager):
             **extra_fields
         )
 
-        # 유경: 유저가 직접 설정하는 것이 아니에요! 로그인에는 필요 없지만 설정은 필수
-        if password:
+        # --- FIX: Only attempt to set password if it's provided and not None/empty ---
+        # This makes the user creation more robust if password is truly optional.
+        if password: # Check if password is not None and not an empty string
             user.set_password(password)
         else:
-            user.set_unusable_password()
+            user.set_unusable_password() # Set an unusable password if none is provided
         user.save(using=self._db)
         return user
 
@@ -36,13 +35,14 @@ class CustomUserManager(BaseUserManager):
 
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('is_active', True) # Superusers are active by default
+        extra_fields.setdefault('is_active', True)
 
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
 
+        # --- FIX: Ensure superuser creation also handles password as potentially None ---
         return self.create_user(email, password=password, **extra_fields)
 
 
@@ -53,8 +53,7 @@ class User(AbstractBaseUser):
     birthdate = models.DateField(null=True, blank=True)
     sex = models.CharField(max_length=10, blank=True)
     blood_type = models.CharField(max_length=3, blank=True)
-    profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
-
+    profile_picture_key = models.URLField(max_length=255, blank=True, null=True)
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -63,7 +62,9 @@ class User(AbstractBaseUser):
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []
+    # --- FIX: Ensure 'password' is NOT in REQUIRED_FIELDS if you're not using it ---
+    # This list is for fields prompted when creating a user via createsuperuser, etc.
+    REQUIRED_FIELDS = [] 
 
     @property
     def age(self):
@@ -75,16 +76,14 @@ class User(AbstractBaseUser):
             return age
         return None
 
+    def get_profile_picture_url(self):
+        return self.profile_picture_key
 
     def has_perm(self, perm, obj=None):
-        "Does the user have a specific permission?"
         return self.is_superuser
 
     def has_module_perms(self, app_label):
-        "Does the user have permissions to view the app `app_label`?"
         return self.is_staff
 
-
     def __str__(self):
-        """String representation of the User."""
         return self.nickname or self.email or f"Kakao:{self.kakao_id}"

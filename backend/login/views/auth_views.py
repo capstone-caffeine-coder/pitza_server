@@ -1,9 +1,12 @@
+# login/views/auth_views.py
+
 from django.shortcuts import render, redirect
 from urllib.parse import urlencode
 import requests
 import os
 from django.contrib.auth import login
 from django.contrib.auth import get_user_model
+
 
 User = get_user_model()
 
@@ -16,6 +19,7 @@ KAKAO_REDIRECT_URI = os.environ.get('KAKAO_REDIRECT_URI')
 
 def login_view(request):
     return render(request, 'login/login.html')
+
 
 def login_google(request):
     auth_endpoint = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -51,18 +55,21 @@ def google_callback(request):
     )
     userinfo = userinfo_response.json()
     email = userinfo.get("email", "")
-    picture = userinfo.get("picture", "")
+    google_picture_url = userinfo.get("picture", "")
 
-    user, created = User.objects.get_or_create(email=email, defaults={"profile_picture": picture})
+    user, created = User.objects.get_or_create(email=email)
+
+    if created:
+        user.profile_picture_key = google_picture_url
+        user.save()
+
     request.session['user'] = email
-
     login(request, user)
 
     if user.nickname:
         return redirect('http://localhost:5173/')
     else:
         return redirect('http://localhost:5173/profile/setup/')
-
 
 
 def login_kakao(request):
@@ -91,15 +98,15 @@ def kakao_callback(request):
     ).json()
 
     kakao_id = str(user_info["id"])
-    # nickname = user_info["properties"].get("nickname") # 이걸 돌리면 회원가입 때도 profile_setup으로 가지 않음.
-    profile_image = user_info["properties"].get("profile_image")
+    profile_image_url = user_info["properties"].get("profile_image")
 
-    user, created = User.objects.get_or_create(
-        kakao_id=kakao_id,
-        defaults={"profile_picture": profile_image}
-    )
+    user, created = User.objects.get_or_create(kakao_id=kakao_id)
+
+    if created:
+        user.profile_picture_key = profile_image_url
+        user.save()
+
     request.session['user'] = f"카카오:{kakao_id}"
-
     login(request, user)
 
     if user.nickname:

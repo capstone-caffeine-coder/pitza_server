@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 from django.contrib.auth import get_user_model
 
+from django.conf import settings
 
 User = get_user_model()
 
@@ -47,6 +48,10 @@ class DonationRequest(models.Model):
         ],
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    def get_public_image_url(self):
+        return f"{settings.MINIO_PUBLIC_URL_BASE}/{settings.MINIO_STORAGE_BUCKET_NAME}/{self.image.name}"
+
     
 
 
