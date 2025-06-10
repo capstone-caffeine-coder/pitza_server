@@ -46,11 +46,17 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         user = self.context['request'].user  # 현재 요청한 사용자
         # user = self.context.get('user') # 테스트를 위함
         other = obj.participants.exclude(id=user.id).first()  # 현재 사용자를 제외한 상대방
+
+        if not other:
+            return None
+
+        profile_url = other.get_profile_picture_url() or ''
+
         return {
             "id": other.id,
             "name": other.nickname,  # 상대방의 ID와 닉네임
-            "profileImage": getattr(other, 'profile_picture', '')  # 없으면 빈 문자열
-        } if other else None
+            "profileImage": profile_url
+        }
 
     def get_unread_count(self, obj):
         user = self.context.get('user')
