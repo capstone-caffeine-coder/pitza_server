@@ -26,6 +26,7 @@ class DonationPost(models.Model):  # 기부하기 탭
 
 class RequestPost(models.Model):  # 요청하기 탭
     requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='', storage=local_storage, blank=True, null=True)
     blood_type = models.CharField(max_length=3, choices=DonationPost.BLOOD_TYPES)
     region = models.CharField(max_length=100)
     reason = models.TextField()

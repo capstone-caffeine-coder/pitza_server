@@ -36,7 +36,15 @@ class DonationPostSerializer(serializers.ModelSerializer):
 
 class RequestPostSerializer(serializers.ModelSerializer):
     requester_username = serializers.CharField(source='requester.nickname', read_only=True)
+    image = serializers.ImageField(required=False) 
 
     class Meta:
         model = RequestPost
-        fields = ['id', 'requester_username', 'blood_type', 'region', 'reason', 'created_at']
+        fields = [
+            'id', 
+            'requester_username', 
+            'image', 
+            'blood_type',
+            'region', 
+            'reason', 
+            'created_at']
