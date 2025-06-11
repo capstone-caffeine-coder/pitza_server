@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     # 기부
@@ -12,3 +14,6 @@ urlpatterns = [
     path('donation-cards/request/create/', views.RequestPostCreate.as_view(), name='request-create'),
     path('donation-cards/request/<int:pk>/', views.RequestPostDetail.as_view(), name='request-detail'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static('/media/', document_root='media')
