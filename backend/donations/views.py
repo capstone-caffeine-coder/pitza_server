@@ -36,21 +36,17 @@ class DonationRequestViewSet(viewsets.ViewSet):
     responses={201: DonationRequestIdSerializer})
     def create(self, request):
         serializer = CreateDonationRequestSerializer(data=request.data)
-        
-        if serializer.is_valid():
 
+        if serializer.is_valid():
+   
             validated_data = serializer.validated_data
-            image_file = validated_data.get('image', None)
-            copied_validated_data = validated_data.copy()
+            image_file = validated_data.get('image')
             
-            if 'image' in copied_validated_data:
-               del copied_validated_data['image']
-            
-            donation_request_serializer = DonationRequestSerializer(data=copied_validated_data)
+            donation_request_serializer = DonationRequestSerializer(data=validated_data)
 
             if donation_request_serializer.is_valid():
                 donation_request = donation_request_serializer.save()
-                
+
                 if image_file:
                     django_file = File(image_file, name=image_file.name)
                     donation_request.image = django_file
