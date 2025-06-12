@@ -59,7 +59,7 @@ class DonationRequestViewSet(viewsets.ViewSet):
                 return Response(donation_request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             print(serializer.errors)
-        #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
     @swagger_auto_schema(responses={200: DonationRequestSerializer})
     def retrieve(self, request, pk):
