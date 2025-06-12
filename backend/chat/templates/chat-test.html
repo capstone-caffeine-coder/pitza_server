@@ -39,6 +39,7 @@
     });
 
     let currentRoomId = '';
+    const myUserId = 'me'
 
     function joinRoom() {
       const roomId = document.getElementById('roomId').value;
@@ -55,12 +56,17 @@
 
       const payload = {
         roomId: currentRoomId,
-        message
+        userId: myUserId,
+        message,
+        timestamp: new Date().toISOString(),
+        messageType: 'text',
+        imageUrl: null,
+        is_read: false
       };
 
       console.log('[emit text]', payload);
       socket.emit('text', payload);
-
+      renderOwnMessage(payload);
       document.getElementById('textInput').value = '';
     }
 
@@ -75,20 +81,58 @@
 
         const payload = {
           roomId: currentRoomId,
-          imageBase64: base64Data
+          userId: myUserId,
+          message: null,
+          timestamp: new Date().toISOString(),
+          messageType: 'image',
+          imageUrl: base64Data,
+          is_read: false
         };
 
         console.log('[emit image]', payload);
         socket.emit('image', payload);
+        renderOwnMessage(payload);
       };
       reader.readAsDataURL(file);
     }
 
     socket.on('chat message', (data) => {
       console.log(data);
+      renderMessage(data);
+    });
 
-      const { userId, message, messageType, timestamp, imageUrl } = data;
-      let content = `<strong> 사용자 ${userId}</strong>: `;
+    function convertUTCToKST(utcString) {
+      const utcDate = new Date(utcString);
+      const kstDate = new Date(utcDate.getTime() + 9 * 60 * 60 * 1000);
+      return kstDate.toLocaleTimeString('ko-KR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23'
+      });
+    }
+
+    function renderOwnMessage(data) {
+      // 수신 메시지와 동일 포맷 유지
+      const dummyUserId = '[나]';
+      const { message, messageType, imageUrl, timestamp } = data;
+      let content = `<strong>${dummyUserId}</strong>: `;
+
+      if (messageType === 'text') {
+        content += message;
+      } else if (messageType === 'image') {
+        const src = imageUrl.startsWith('http') ? imageUrl : `data:image/png;base64,${imageUrl}`;
+        content += `[이미지]<br><img src="${src}" class="chat-image" />`;
+      }
+
+      const formattedTime = convertUTCToKST(timestamp);
+      content += ` <span style="color:#999;">(${new Date(timestamp).toLocaleTimeString()})</span>`;
+      appendMessage(content);
+    }
+
+    function renderMessage(data) {
+      const { userId, message, messageType, imageUrl, timestamp } = data;
+      let content = `<strong>사용자 ${userId}</strong>: `;
 
       if (messageType === 'text') {
         content += message;
@@ -96,9 +140,10 @@
         content += `[이미지]<br><img src="${imageUrl}" class="chat-image" />`;
       }
 
-      content += ` <span style="color:#999;">(${new Date(timestamp).toLocaleTimeString()})</span>`;
+      const formattedTime = convertUTCToKST(timestamp);
+      content += ` <span style="color:#999;">(${ formattedTime })</span>`;
       appendMessage(content);
-    });
+    }
 
     function appendMessage(html) {
       const msgBox = document.getElementById('messages');
