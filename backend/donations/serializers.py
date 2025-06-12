@@ -67,7 +67,7 @@ class DonationRequestIdSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     
 class DonatorRegisteredIdSerializer(serializers.Serializer):
-    donator_registered_id = serializers.IntegerField()
+    donator_registered_id = serializers.CharField()
 
 class MatchRequestSerializer(serializers.Serializer):
     id = serializers.IntegerField()

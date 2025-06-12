@@ -146,7 +146,7 @@ class DonationRequestViewSet(viewsets.ViewSet):
         serializer = SelectedMatchRequestSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save() 
-            response_serializer = DonatorRegisteredIdSerializer(serializer.instance.donator_registered_id)       
+            response_serializer = DonatorRegisteredIdSerializer(serializer.instance.donation_request)       
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
