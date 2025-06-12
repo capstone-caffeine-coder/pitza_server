@@ -31,7 +31,7 @@ class DonationPostSerializer(serializers.ModelSerializer):
     def get_donor_profile_image(self, obj):
         if obj.donor and obj.donor.profile_picture_key:
             request = self.context.get('request')
-            image_url = obj.donor.profile_picture_key.url
+            image_url = obj.donor.profile_picture_key
             return request.build_absolute_uri(image_url) if request else image_url
         return None
 
@@ -54,14 +54,14 @@ class RequestPostSerializer(serializers.ModelSerializer):
             'reason', 
             'created_at']
         
-        def get_requester_username(self, obj):
+    def get_requester_username(self, obj):
             if obj.requester:
                 return obj.requester.nickname or obj.requester.email or f"Kakao:{obj.requester.kakao_id}"
             return None
 
-        def get_requester_profile_image(self, obj):
+    def get_requester_profile_image(self, obj):
             if obj.requester and obj.requester.profile_picture_key:
                 request = self.context.get('request')
-                image_url = obj.requester.profile_picture_key.url
+                image_url = obj.requester.profile_picture_key
                 return request.build_absolute_uri(image_url) if request else image_url
             return None
