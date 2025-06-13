@@ -39,15 +39,14 @@
     });
 
     let currentRoomId = '';
-    const myUserId = 'me'
 
     function joinRoom() {
-      const room_id = document.getElementById('roomId').value;
-      if (!room_id) return alert("Room ID를 입력하세요.");
+      const roomId = document.getElementById('roomId').value;
+      if (!roomId) return alert("Room ID를 입력하세요.");
 
-      currentRoomId = room_id;
-      socket.emit('join', room_id);
-      appendMessage(`방 '${room_id}'에 참가했습니다`);
+      currentRoomId = roomId;
+      socket.emit('join', roomId);
+      appendMessage(`방 '${roomId}'에 참가했습니다`);
     }
 
     function sendText() {
@@ -55,18 +54,13 @@
       if (!message || !currentRoomId) return;
 
       const payload = {
-        room_id: currentRoomId,
-        user_id: myUserId,
-        message,
-        timestamp: new Date().toISOString(),
-        message_type: 'text',
-        image_url: null,
-        is_read: false
+        roomId: currentRoomId,
+        message
       };
 
       console.log('[emit text]', payload);
       socket.emit('text', payload);
-      renderOwnMessage(payload);
+
       document.getElementById('textInput').value = '';
     }
 
@@ -80,70 +74,31 @@
         const base64Data = e.target.result.split(',')[1];
 
         const payload = {
-          room_id: currentRoomId,
-          user_id: myUserId,
-          message: null,
-          timestamp: new Date().toISOString(),
-          message_type: 'image',
-          image_url: base64Data,
-          is_read: false
+          roomId: currentRoomId,
+          imageBase64: base64Data
         };
 
         console.log('[emit image]', payload);
         socket.emit('image', payload);
-        renderOwnMessage(payload);
       };
       reader.readAsDataURL(file);
     }
 
     socket.on('chat message', (data) => {
       console.log(data);
-      renderMessage(data);
-    });
 
-    function convertUTCToKST(utcString) {
-      const utcDate = new Date(utcString);
-      const kstDate = new Date(utcDate.getTime() + 9 * 60 * 60 * 1000);
-      return kstDate.toLocaleTimeString('ko-KR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hourCycle: 'h23'
-      });
-    }
+      const { userId, message, messageType, timestamp, imageUrl } = data;
+      let content = `<strong> 사용자 ${userId}</strong>: `;
 
-    function renderOwnMessage(data) {
-      // 수신 메시지와 동일 포맷 유지
-      const dummyUserId = '[나]';
-      const { message, message_type, image_url, timestamp } = data;
-      let content = `<strong>${dummyUserId}</strong>: `;
-
-      if (message_type === 'text') {
+      if (messageType === 'text') {
         content += message;
-      } else if (message_type === 'image') {
-        const src = image_url.startsWith('http') ? image_url : `data:image/png;base64,${image_url}`;
-        content += `[이미지]<br><img src="${src}" class="chat-image" />`;
+      } else if (messageType === 'image') {
+        content += `[이미지]<br><img src="${imageUrl}" class="chat-image" />`;
       }
 
-      const formattedTime = convertUTCToKST(timestamp);
       content += ` <span style="color:#999;">(${new Date(timestamp).toLocaleTimeString()})</span>`;
       appendMessage(content);
-    }
-
-    function renderMessage(data) {
-      const { user_id, message, message_type, image_url, timestamp } = data;
-      let content = `<strong>사용자 ${user_id}</strong>: `;
-
-      if (message_type === 'text') {
-        content += message;
-      } else if (message_type === 'image') {
-        content += `[이미지]<br><img src="${image_url}" class="chat-image" />`;
-      }
-
-      const formattedTime = convertUTCToKST(timestamp);
-      content += ` <span style="color:#999;">(${ formattedTime })</span>`;
-      appendMessage(content);
-    }
+    });
 
     function appendMessage(html) {
       const msgBox = document.getElementById('messages');
