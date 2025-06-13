@@ -158,7 +158,7 @@ class DonationRequestViewSet(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             response_serializer = MessageSerializer(data={'message': 'Match rejected'})
-            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+            return Response(response_serializer.initial_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
