@@ -13,7 +13,7 @@ const { log } = require('console');
 
 async function authenticate(socket, next) {
   const cookieHeader = socket.handshake.headers.cookie;
-  console.log('Received cookies:', cookieHeader);
+  // console.log('Received cookies:', cookieHeader);
     try {
       if (!cookieHeader) {
         console.log('쿠키가 없습니다. 인증 실패');
@@ -226,6 +226,7 @@ Promise.all([
     });
 
     socket.on('image', async (payload) => {
+      // console.log('payload: ', payload);
       const {room_id, image_url } = payload;
       const user_id = socket.data.user.id;
       try {
@@ -233,7 +234,12 @@ Promise.all([
           throw new Error('이미지 데이터가 없습니다.');
         }
 
-        const buffer = Buffer.from(image_url, 'base64');
+        let base64Data = image_url;
+        if (image_url.startsWith('data:image')) {
+          base64Data = image_url.split(',')[1];
+        }
+        
+        const buffer = Buffer.from(base64Data, 'base64');
         const filename = `chat-images/${Date.now()}_${user_id}.png`;
 
         await uploadImageToMinio(buffer, filename);
