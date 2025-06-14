@@ -14,6 +14,7 @@ class DonationPost(models.Model):  # 기부하기 탭
     GENDER_CHOICES = [('M', '남성'), ('F', '여성')]
 
     donor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    donor_name = models.CharField(max_length=100, null=True, blank=True)
     image = models.ImageField(upload_to='', storage=local_storage, blank=True, null=True)
     blood_type = models.CharField(max_length=3, choices=BLOOD_TYPES)
     age = models.PositiveIntegerField()
