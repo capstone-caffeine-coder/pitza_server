@@ -41,18 +41,21 @@ class Command(BaseCommand):
         for i in range(number_of_posts):
             try:
                 donor = random.choice(users)
+                donor_name = fake.name()
                 post = DonationPost.objects.create(
                     donor=donor,
+                    donor_name=donor_name,
                     blood_type=random.choice(blood_types),
                     age=random.randint(18, 65),
                     gender=random.choice(genders),
                     region=random.choice(regions),
                     introduction=fake.paragraph(nb_sentences=3),
-                    image=None  # 실제 이미지 경로를 넣고 싶다면 여기에 파일 경로 추가
+                    image=None
                 )
                 created_count += 1
                 self.stdout.write(self.style.SUCCESS(
-                    f"[{created_count}] {donor.email}님의 기부글 생성 완료 (ID: {post.id})"
+                    f"[{created_count}] {donor_name}님의 기부글 생성 완료 (ID: {post.id})"
+                    #f"[{created_count}] {donor.email}님의 기부글 생성 완료 (ID: {post.id})"
                 ))
             except Exception as e:
                 self.stderr.write(self.style.ERROR(

@@ -1,17 +1,12 @@
+# login/views/auth_views.py
+
 from django.shortcuts import render, redirect
 from urllib.parse import urlencode
 import requests
 import os
 from django.contrib.auth import login
 from django.contrib.auth import get_user_model
-import uuid
-from io import BytesIO
 
-try:
-    from login.minio_utils import minio_client, MINIO_BUCKET_NAME
-except ImportError:
-    minio_client = None
-    MINIO_BUCKET_NAME = "default-profile-pictures"
 
 User = get_user_model()
 
@@ -24,46 +19,6 @@ KAKAO_REDIRECT_URI = os.environ.get('KAKAO_REDIRECT_URI')
 
 def login_view(request):
     return render(request, 'login/login.html')
-
-def upload_profile_picture_to_minio(image_url, user_id):
-    if not image_url or not minio_client:
-        return None
-
-    try:
-        response = requests.get(image_url, stream=True, timeout=10)
-        response.raise_for_status()
-
-        content_type = response.headers.get('Content-Type', 'application/octet-stream')
-        original_filename = image_url.split('/')[-1]
-        if '.' not in original_filename or len(original_filename.split('.')[-1]) > 5:
-            if 'image/jpeg' in content_type:
-                original_filename = f"{uuid.uuid4()}.jpg"
-            elif 'image/png' in content_type:
-                original_filename = f"{uuid.uuid4()}.png"
-            elif 'image/gif' in content_type:
-                original_filename = f"{uuid.uuid4()}.gif"
-            else:
-                original_filename = f"{uuid.uuid4()}.bin"
-        else:
-            original_filename = f"{uuid.uuid4()}_{original_filename}"
-
-        minio_object_key = f"profile_pictures/{user_id}/{original_filename}"
-
-        file_content = BytesIO(response.content)
-        file_size = len(response.content)
-
-        minio_client.put_object(
-            MINIO_BUCKET_NAME,
-            minio_object_key,
-            file_content,
-            file_size,
-            content_type=content_type
-        )
-        return minio_object_key
-    except requests.exceptions.RequestException as e:
-        return None
-    except Exception as e:
-        return None
 
 
 def login_google(request):
@@ -105,10 +60,8 @@ def google_callback(request):
     user, created = User.objects.get_or_create(email=email)
 
     if created:
-        minio_key = upload_profile_picture_to_minio(google_picture_url, user.id)
-        if minio_key:
-            user.profile_picture_key = minio_key
-            user.save()
+        user.profile_picture_key = google_picture_url
+        user.save()
 
     request.session['user'] = email
     login(request, user)
@@ -150,10 +103,8 @@ def kakao_callback(request):
     user, created = User.objects.get_or_create(kakao_id=kakao_id)
 
     if created:
-        minio_key = upload_profile_picture_to_minio(profile_image_url, user.id)
-        if minio_key:
-            user.profile_picture_key = minio_key
-            user.save()
+        user.profile_picture_key = profile_image_url
+        user.save()
 
     request.session['user'] = f"카카오:{kakao_id}"
     login(request, user)

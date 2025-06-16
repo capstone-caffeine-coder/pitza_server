@@ -8,10 +8,12 @@ const { createClient } = require('redis');
 const mysql = require('mysql2');
 const Minio = require('minio');
 const axios = require('axios');
+const { pathToFileURL } = require('url');
+const { log } = require('console');
 
 async function authenticate(socket, next) {
   const cookieHeader = socket.handshake.headers.cookie;
-  console.log('Received cookies:', cookieHeader);
+  // console.log('Received cookies:', cookieHeader);
     try {
       if (!cookieHeader) {
         console.log('쿠키가 없습니다. 인증 실패');
@@ -80,14 +82,14 @@ function ensureMinioBucketReady() {
   });
 }
 
-function isUserInRoom(userId, roomId) {
+function isUserInRoom(user_id, room_id) {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT COUNT(*) as count
       FROM chat_chatroom_participants
       WHERE chatroom_id = ? AND user_id = ?
     `;
-    db.query(query, [roomId, userId], (err, results) => {
+    db.query(query, [room_id, user_id], (err, results) => {
       if (err) return reject(err);
       const count = results[0].count;
       resolve(count > 0);  // true = 참여중
@@ -125,28 +127,30 @@ const io = new Server(httpServer, {
 
 io.use(authenticate);
 
+// timestamp 포맷 함수
+function formatTimestampForMySQL(date) {
+  return new Date(date).toISOString().slice(0, 19).replace('T', ' ');
+}
+
 // 메시지 전송
-function sendChatMessage({ socket, roomId, message, messageType, imageUrl = null }) {
-  const timestamp = new Date();
-  const userId = socket.data.user.id;
+function sendChatMessage({ socket, room_id, message, message_type, timestamp = null, image_url = null }) {
+  const user_id = socket.data.user.id;
+  const formattedTimestamp = formatTimestampForMySQL(new Date());
 
-  pubClient.publish(`room_${roomId}_channel`, JSON.stringify({
+  const payload = {
+    room_id,
+    user_id,
     message,
-    userId,
-    timestamp,
-    messageType
-  }));
-
-  socket.broadcast.to(roomId).emit('chat message', {
-    userId,
-    message,
-    timestamp: timestamp.toISOString(),
-    messageType,
-    imageUrl,
+    timestamp: formattedTimestamp,
+    message_type,
+    image_url,
     is_read: false
-  });
+  };
 
-  return timestamp;
+  pubClient.publish(`room_${room_id}_channel`, JSON.stringify(payload));
+  socket.broadcast.to(room_id).emit('chat message', payload);
+
+  return payload;
 }
 
 // 서버 실행
@@ -166,19 +170,19 @@ Promise.all([
     }
     console.log(`인증된 연결: ${socket.id}, 사용자 ID: ${socket.data.user.id}`);
 
-    socket.on('join', async (roomId) => {
-      const userId = socket.data.user.id;
+    socket.on('join', async (room_id) => {
+      const user_id = socket.data.user.id;
 
         try {
-          const allowed = await isUserInRoom(userId, roomId);
+          const allowed = await isUserInRoom(user_id, room_id);
           if (!allowed) {
-            console.warn(`접근 불가: 사용자 ${userId}가 방 ${roomId}에 참가하려 함`);
+            console.warn(`접근 불가: 사용자 ${user_id}가 방 ${room_id}에 참가하려 함`);
             socket.emit('error', { message: '해당 채팅방에 접근 권한이 없습니다.' });
             return;
           }
 
-          socket.join(roomId);
-          console.log(`${socket.id} -> 방 참가: ${roomId}`);
+          socket.join(room_id);
+          console.log(`${socket.id} -> 방 참가: ${room_id}`);
         } catch (err) {
           console.error('방 참가 중 오류:', err.message);
           socket.emit('error', { message: '서버 오류로 방 참가에 실패했습니다.' });
@@ -186,23 +190,31 @@ Promise.all([
     });
 
 
-    socket.on('text', async ({ roomId, message}) => {
-      const userId = socket.data.user.id;
-      console.log(`텍스트 메시지 수신: ${message} | 방: ${roomId} | 사용자: ${userId}`)
+    socket.on('text', async (payload) => {
+      const { room_id, message } = payload;
+      const user_id = socket.data.user.id;
+      console.log(`텍스트 메시지 수신: ${message} | 방: ${room_id} | 사용자: ${user_id}`)
 
-      const timestamp = sendChatMessage({
+      const finalPayload = sendChatMessage({
         socket,
-        userId,
-        roomId,
+        room_id,
         message,
-        messageType: 'text'
+        message_type: 'text'
       });
 
       const query = `
         INSERT INTO chat_message (chatroom_id, sender_id, content, message_type, timestamp, is_read)
         VALUES (?, ?, ?, ?, ?, ?)
       `;
-      const values = [roomId, userId, message, 'text', timestamp, false];
+
+      const values = [
+        room_id, 
+        user_id, 
+        finalPayload.message, 
+        finalPayload.message_type, 
+        finalPayload.timestamp, 
+        finalPayload.is_read
+      ];
 
       db.query(query, values, (err, result) => {
         if (err) {
@@ -213,43 +225,53 @@ Promise.all([
       });
     });
 
-    socket.on('image', async ({ roomId, imageBase64 }) => {
-      const userId = socket.data.user.id;
+    socket.on('image', async (payload) => {
+      // console.log('payload: ', payload);
+      const {room_id, image_url } = payload;
+      const user_id = socket.data.user.id;
       try {
-        if (!imageBase64) {
+        if (!image_url) {
           throw new Error('이미지 데이터가 없습니다.');
         }
 
-        const buffer = Buffer.from(imageBase64, 'base64');
-        const filename = `chat-images/${Date.now()}_${userId}.png`;
+        let base64Data = image_url;
+        if (image_url.startsWith('data:image')) {
+          base64Data = image_url.split(',')[1];
+        }
+        
+        const buffer = Buffer.from(base64Data, 'base64');
+        const filename = `chat-images/${Date.now()}_${user_id}.png`;
 
         await uploadImageToMinio(buffer, filename);
 
-        // const imageUrl = `http://${process.env.MINIO_HOST}:${process.env.MINIO_PORT}/${bucketName}/${filename}`;
-        const imageUrl = `http://${process.env.HOST_PUBLIC_MINIO}:${process.env.MINIO_PORT}/${bucketName}/${filename}`;
+        const finalImageUrl = `http://${process.env.HOST_PUBLIC_MINIO}:${process.env.MINIO_PORT}/${bucketName}/${filename}`;
 
-        const timestamp = sendChatMessage({
+        const finalPayload = sendChatMessage({
           socket,
-          userId,
-          roomId,
+          room_id,
           message: '[이미지]',
-          messageType: 'image',
-          imageUrl
+          message_type: 'image',
+          image_url: finalImageUrl,
         });
 
         const query = `
           INSERT INTO chat_message (chatroom_id, sender_id, content, message_type, timestamp, is_read, image_url)
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
-        const values = [roomId, userId, '[이미지]', 'image', timestamp, false, imageUrl];
+        const values = [
+          room_id, 
+          user_id, 
+          finalPayload.message, 
+          finalPayload.message_type, 
+          finalPayload.timestamp, 
+          finalPayload.is_read, 
+          finalPayload.image_url];
 
         db.query(query, values, (err, result) => {
           if (err) {
             throw new Error(`MySQL 이미지 메시지 저장 오류: ${err.message}`);
           } else {
-            console.log('MySQL에 이미지 메시지 저장 성공:', result.insertId);
-            console.log(`imageUrl: ${imageUrl}`);
-            
+            console.log('MySQL에 이미지 메시지 저장 성공:', result.insertId);            
           }
         });
 
