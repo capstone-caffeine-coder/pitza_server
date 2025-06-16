@@ -67,10 +67,12 @@ class DonationRequestIdSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     
 class DonatorRegisteredIdSerializer(serializers.Serializer):
-    donator_registered_id = serializers.IntegerField()
+    donator_registered_id = serializers.CharField()
 
 class MatchRequestSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
+    id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+    )
     blood_type = serializers.CharField()
     age = serializers.IntegerField()
     sex = serializers.CharField()

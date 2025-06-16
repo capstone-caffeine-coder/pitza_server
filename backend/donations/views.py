@@ -15,7 +15,7 @@ from django.core.files.storage import storages
 from django.core.files import File
 
 from .serializers import CreateDonationRequestSerializer, DonationRequestIdSerializer, DonationRequestSerializer, DonatorRegisteredIdSerializer, MatchRequestSerializer, MessageSerializer, RejectedMatchRequestSerializer, SelectedMatchRequestSerializer
-from .models import DonationRequest, RejectedMatchRequest
+from .models import DonationRequest, RejectedMatchRequest, SelectedMatchRequest
 
 class DonationRequestViewSet(viewsets.ViewSet):
     swagger_schema = SwaggerAutoSchema
@@ -36,21 +36,17 @@ class DonationRequestViewSet(viewsets.ViewSet):
     responses={201: DonationRequestIdSerializer})
     def create(self, request):
         serializer = CreateDonationRequestSerializer(data=request.data)
-        
-        if serializer.is_valid():
 
+        if serializer.is_valid():
+   
             validated_data = serializer.validated_data
-            image_file = validated_data.get('image', None)
-            copied_validated_data = validated_data.copy()
+            image_file = validated_data.get('image')
             
-            if 'image' in copied_validated_data:
-               del copied_validated_data['image']
-            
-            donation_request_serializer = DonationRequestSerializer(data=copied_validated_data)
+            donation_request_serializer = DonationRequestSerializer(data=validated_data)
 
             if donation_request_serializer.is_valid():
                 donation_request = donation_request_serializer.save()
-                
+
                 if image_file:
                     django_file = File(image_file, name=image_file.name)
                     donation_request.image = django_file
@@ -63,7 +59,7 @@ class DonationRequestViewSet(viewsets.ViewSet):
                 return Response(donation_request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             print(serializer.errors)
-        #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
     @swagger_auto_schema(responses={200: DonationRequestSerializer})
     def retrieve(self, request, pk):
@@ -75,9 +71,16 @@ class DonationRequestViewSet(viewsets.ViewSet):
     responses={200: DonationRequestIdSerializer})
     @action(detail=False, methods=['post'], url_path='match')
     def match(self, request):
-        serializer = MatchRequestSerializer(data=request.data)
+        serializer = MatchRequestSerializer(data={
+            'id': request.user.id,
+            'blood_type': request.data.get('blood_type'),
+            'age': request.data.get('age'),
+            'sex': request.data.get('sex'),
+            'location': request.data.get('location'),
+            'next_donation_date': request.data.get('next_donation_date')
+        })
+        
         if serializer.is_valid():
-            
             # calculate the date range for the next donation date
             next_donation_date = datetime.datetime.strptime(serializer.data['next_donation_date'], '%Y-%m-%d').date()
               
@@ -94,13 +97,15 @@ class DonationRequestViewSet(viewsets.ViewSet):
  
 
             # get the list of rejected donation request IDs for the current user
-            rejected_ids = RejectedMatchRequest.objects.filter(user=serializer.validated_data['id']).values_list('donation_request_id', flat=True)
-
+            rejected_ids = RejectedMatchRequest.objects.filter(user=request.user).values_list('donation_request_id', flat=True)
+            print(rejected_ids)
+            selected_ids = SelectedMatchRequest.objects.filter(user=request.user).values_list('donation_request_id', flat=True)
+            print(selected_ids)
             queryset = DonationRequest.objects.filter(
                 blood_type=requested_blood_type,
                 donation_due_date__gte=date_min,  
                 donation_due_date__lte=date_max
-            ).exclude(id__in=rejected_ids)
+            ).exclude(id__in=rejected_ids).exclude(id__in=selected_ids)
 
             # filter the queryset based on sex, location, age, and date
             queryset = queryset.annotate(
@@ -143,10 +148,13 @@ class DonationRequestViewSet(viewsets.ViewSet):
         """
         Select a match for a donation request
         """
-        serializer = SelectedMatchRequestSerializer(data=request.data)
+        serializer = SelectedMatchRequestSerializer(data={
+            'user': request.user.id,
+            'donation_request': request.data.get('donation_request')
+        })
         if serializer.is_valid():
             serializer.save() 
-            response_serializer = DonatorRegisteredIdSerializer(serializer.instance.donator_registered_id)       
+            response_serializer = DonatorRegisteredIdSerializer(serializer.instance.donation_request)       
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -158,11 +166,14 @@ class DonationRequestViewSet(viewsets.ViewSet):
         """
         Reject a match for a donation request
         """
-        serializer = RejectedMatchRequestSerializer(data=request.data)
+        serializer = RejectedMatchRequestSerializer(data={
+            'user': request.user.id,
+            'donation_request': request.data.get('donation_request')
+        })
         if serializer.is_valid():
             serializer.save()
             response_serializer = MessageSerializer(data={'message': 'Match rejected'})
-            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+            return Response(response_serializer.initial_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
