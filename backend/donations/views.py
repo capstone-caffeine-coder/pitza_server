@@ -15,7 +15,7 @@ from django.core.files.storage import storages
 from django.core.files import File
 
 from .serializers import CreateDonationRequestSerializer, DonationRequestIdSerializer, DonationRequestSerializer, DonatorRegisteredIdSerializer, MatchRequestSerializer, MessageSerializer, RejectedMatchRequestSerializer, SelectedMatchRequestSerializer
-from .models import DonationRequest, RejectedMatchRequest
+from .models import DonationRequest, RejectedMatchRequest, SelectedMatchRequest
 
 class DonationRequestViewSet(viewsets.ViewSet):
     swagger_schema = SwaggerAutoSchema
@@ -71,9 +71,16 @@ class DonationRequestViewSet(viewsets.ViewSet):
     responses={200: DonationRequestIdSerializer})
     @action(detail=False, methods=['post'], url_path='match')
     def match(self, request):
-        serializer = MatchRequestSerializer(data=request.data)
+        serializer = MatchRequestSerializer(data={
+            'id': request.user.id,
+            'blood_type': request.data.get('blood_type'),
+            'age': request.data.get('age'),
+            'sex': request.data.get('sex'),
+            'location': request.data.get('location'),
+            'next_donation_date': request.data.get('next_donation_date')
+        })
+        
         if serializer.is_valid():
-            
             # calculate the date range for the next donation date
             next_donation_date = datetime.datetime.strptime(serializer.data['next_donation_date'], '%Y-%m-%d').date()
               
@@ -90,13 +97,15 @@ class DonationRequestViewSet(viewsets.ViewSet):
  
 
             # get the list of rejected donation request IDs for the current user
-            rejected_ids = RejectedMatchRequest.objects.filter(user=serializer.validated_data['id']).values_list('donation_request_id', flat=True)
-
+            rejected_ids = RejectedMatchRequest.objects.filter(user=request.user).values_list('donation_request_id', flat=True)
+            print(rejected_ids)
+            selected_ids = SelectedMatchRequest.objects.filter(user=request.user).values_list('donation_request_id', flat=True)
+            print(selected_ids)
             queryset = DonationRequest.objects.filter(
                 blood_type=requested_blood_type,
                 donation_due_date__gte=date_min,  
                 donation_due_date__lte=date_max
-            ).exclude(id__in=rejected_ids)
+            ).exclude(id__in=rejected_ids).exclude(id__in=selected_ids)
 
             # filter the queryset based on sex, location, age, and date
             queryset = queryset.annotate(
@@ -139,7 +148,10 @@ class DonationRequestViewSet(viewsets.ViewSet):
         """
         Select a match for a donation request
         """
-        serializer = SelectedMatchRequestSerializer(data=request.data)
+        serializer = SelectedMatchRequestSerializer(data={
+            'user': request.user.id,
+            'donation_request': request.data.get('donation_request')
+        })
         if serializer.is_valid():
             serializer.save() 
             response_serializer = DonatorRegisteredIdSerializer(serializer.instance.donation_request)       
@@ -154,7 +166,10 @@ class DonationRequestViewSet(viewsets.ViewSet):
         """
         Reject a match for a donation request
         """
-        serializer = RejectedMatchRequestSerializer(data=request.data)
+        serializer = RejectedMatchRequestSerializer(data={
+            'user': request.user.id,
+            'donation_request': request.data.get('donation_request')
+        })
         if serializer.is_valid():
             serializer.save()
             response_serializer = MessageSerializer(data={'message': 'Match rejected'})
