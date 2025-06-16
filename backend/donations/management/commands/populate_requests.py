@@ -51,7 +51,7 @@ class Command(BaseCommand):
             # Generate a due date between 1 day and 60 days from now
             donation_due_date = timezone.now().date() + timedelta(days=random.randint(1, 30))
 
-            image_placeholder_path = f"test.png" 
+            image_placeholder_path = f"../../../test_assets/test.png" 
             # e.g. 220923-0093
             donator_registered_id_value = fake.numerify(text='######-####')
 
